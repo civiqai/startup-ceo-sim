@@ -35,7 +35,7 @@ const ROOM_TEXTURES := [
 var _member_rects: Array[Rect2] = []
 var _current_phase: int = -1
 var _room_texture_cache: Dictionary = {}
-var _room_tex: ImageTexture = null
+var _room_tex: Texture2D = null
 
 
 func _ready() -> void:
@@ -357,7 +357,7 @@ func _get_office_name() -> String:
 	return names[_get_phase_index()]
 
 
-## 部屋背景を更新（import不要のImage.load方式）
+## 部屋背景を更新
 func _update_room_bg(phase: int) -> void:
 	if phase == _current_phase and _room_tex != null:
 		return
@@ -368,14 +368,11 @@ func _update_room_bg(phase: int) -> void:
 		return
 
 	var tex_path = ROOM_TEXTURES[phase]
-	var abs_path = ProjectSettings.globalize_path(tex_path)
-	var img := Image.new()
-	var err = img.load(abs_path)
-	if err != OK:
+	var tex = load(tex_path)
+	if tex == null:
 		push_warning("Room image load failed: %s" % tex_path)
 		return
 
-	var tex = ImageTexture.create_from_image(img)
 	_room_texture_cache[phase] = tex
 	_room_tex = tex
 
