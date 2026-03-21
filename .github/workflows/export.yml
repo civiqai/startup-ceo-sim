@@ -54,8 +54,10 @@ jobs:
 
       - name: Setup export templates
         run: |
-          mkdir -p /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable/* /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable/ || true
+          TEMPLATE_DIR=$(echo ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable)
+          mkdir -p "$TEMPLATE_DIR"
+          cp /root/.local/share/godot/templates/${GODOT_VERSION}.stable/* "$TEMPLATE_DIR/" 2>/dev/null || true
+          ls -la "$TEMPLATE_DIR/" || true
 
       - name: Import project
         run: godot --headless --import 2>&1 || true
@@ -92,8 +94,9 @@ jobs:
 
       - name: Setup export templates
         run: |
-          mkdir -p /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable
-          mv /root/.local/share/godot/templates/${GODOT_VERSION}.stable/* /root/.local/share/godot/export_templates/${GODOT_VERSION}.stable/ || true
+          TEMPLATE_DIR=$(echo ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable)
+          mkdir -p "$TEMPLATE_DIR"
+          cp /root/.local/share/godot/templates/${GODOT_VERSION}.stable/* "$TEMPLATE_DIR/" 2>/dev/null || true
 
       - name: Setup Android SDK & keystore
         run: |
