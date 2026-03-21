@@ -167,7 +167,7 @@ func _draw_member_cell(rect: Rect2, name_str: String, role_str: String, level: i
 	# アバター画像（丸くクリップして描画）
 	var avatar_drawn := false
 	if avatar_id > 0 and AvatarLoader != null:
-		var tex: ImageTexture = AvatarLoader.get_cached(avatar_id)
+		var tex: Texture2D = AvatarLoader.get_cached(avatar_id)
 		if tex != null:
 			# 丸い領域にアバター画像を描画
 			var img_rect := Rect2(avatar_cx - avatar_r, avatar_cy - avatar_r, avatar_r * 2, avatar_r * 2)
