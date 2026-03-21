@@ -104,14 +104,16 @@ var monthly_cost: int:
 	get:
 		return 50 + TeamManager.get_total_monthly_cost()
 
-# 月間売上
+# 月間売上（MRR）
+# ユーザー数 × ARPU（利益率+UXで決まる単価） × ブランド倍率
 var revenue: int:
 	get:
 		if users <= 0:
 			return 0
-		var base = users * (product_margin + product_ux) / 800
-		var brand_multiplier = 1.0 + (brand_value / 200.0)
-		return int(base * brand_multiplier)
+		# ARPU = (margin + ux) / 100 万円 → ユーザー1000人・合計50で MRR 500万
+		var arpu: float = (product_margin + product_ux) / 100.0
+		var brand_multiplier: float = 1.0 + (brand_value / 100.0)
+		return int(users * arpu * brand_multiplier)
 
 # 時価総額
 var valuation: int:
