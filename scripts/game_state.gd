@@ -68,6 +68,8 @@ var equity_share: float = 100.0  # 持ち株比率 (%) - 初期100%
 var contract_work_remaining: int = 0  # 受託開発残り月数
 var contract_work_name: String = ""   # 受託案件名
 var contract_work_reward: int = 0     # 受託報酬
+var contract_just_completed: bool = false  # 受託完了フラグ（ターン処理用）
+var contract_completed_reward: int = 0     # 完了時の報酬額
 
 const CONTRACT_JOBS := [
 	{"name": "大手商社の在庫管理システム", "reward": 800, "months": 2, "eng_bonus": 3},
@@ -186,10 +188,13 @@ func advance_month() -> void:
 	if brand_value >= 20:
 		brand_value -= 1
 	# 受託開発の進捗
+	contract_just_completed = false
 	if contract_work_remaining > 0:
 		contract_work_remaining -= 1
 		if contract_work_remaining <= 0:
 			cash += contract_work_reward
+			contract_just_completed = true
+			contract_completed_reward = contract_work_reward
 			# エンジニア技術力UP
 			for m in TeamManager.members:
 				if m.skill_type == "engineer":

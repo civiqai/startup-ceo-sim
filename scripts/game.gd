@@ -460,6 +460,7 @@ func _on_hire_completed(member_data: Dictionary, channel: String, total_cost: in
 	# 新メンバーからの挨拶をログメッセージに含める
 	var greeting: String = TeamMemberClass.get_greeting(member.member_name, member.skill_type, member.personality)
 	var full_msg := log_msg + "\n[color=#88BBDD]💬 %s「%s」[/color]" % [member.member_name, greeting]
+	AudioManager.play_sfx("success")
 	_update_ui()
 	turn_manager.execute_turn_with_result(full_msg)
 
@@ -550,6 +551,7 @@ func _on_event_popup_closed(_choice_index: int) -> void:
 
 	# マーケティング結果ポップアップの場合
 	if not _pending_marketing_result.is_empty():
+		AudioManager.play_sfx("success")
 		var r = _pending_marketing_result
 		var log_msg := "📢 %s%s: %s" % [r.get("channel_icon", ""), r.get("channel_name", ""), r.get("rating", "")]
 		_pending_marketing_result = {}
@@ -590,8 +592,12 @@ func _on_turn_ended() -> void:
 	})
 	_current_month_events.clear()
 
+	# 受託開発完了チェック
+	if GameState.contract_just_completed:
+		AudioManager.play_sfx("cash")
+		_add_log("[color=#55CC70]💰 受託開発完了！報酬 %d万円を獲得！[/color]" % GameState.contract_completed_reward)
 	# 受託開発中の表示
-	if GameState.contract_work_remaining > 0:
+	elif GameState.contract_work_remaining > 0:
 		_add_log("[color=#DDA055]🏗️ 受託開発中: %s（残%dヶ月）[/color]" % [GameState.contract_work_name, GameState.contract_work_remaining])
 	_add_log("[color=#8899AA]— 月末: 固定費 %d万円 / 売上 %d万円 —[/color]" % [GameState.monthly_cost, GameState.revenue])
 	_update_ui()
@@ -612,6 +618,7 @@ func _on_turn_ended() -> void:
 	# フェーズ昇格チェック
 	var phase_up = phase_manager.check_phase_up(GameState)
 	if not phase_up.is_empty():
+		AudioManager.play_sfx("success")
 		var phase_name = "%s %s" % [phase_up.get("icon", ""), phase_up.get("name", "")]
 		_add_log("[color=#FFD966]🎊 フェーズ昇格: %s[/color]" % phase_name)
 		GameState.current_phase = phase_manager.current_phase
@@ -730,6 +737,7 @@ func _on_investor_mood_changed(investor_id: String, mood: String) -> void:
 	var name_str = inv.get("name", "投資家")
 	match mood:
 		"unhappy":
+			AudioManager.play_sfx("negative")
 			_add_log("[color=#E85555]😠 %sの不満が高まっている…[/color]" % name_str)
 		"happy":
 			_add_log("[color=#55CC70]😊 %sが成長に満足しています[/color]" % name_str)
@@ -862,6 +870,7 @@ func _on_feature_dev_selected(feature_id: String) -> void:
 			feat.get("icon", ""), feat.get("name", ""), feat.get("months", 1)])
 	# 即時ターン実行（パラメータ変化を表示）
 	var result: String = GameState.apply_action("develop")
+	AudioManager.play_sfx("success")
 	_update_ui()
 	turn_manager.execute_turn_with_result(result)
 
@@ -890,15 +899,18 @@ func _on_create_product_cancelled() -> void:
 
 
 func _on_feature_completed(feature: Dictionary) -> void:
+	AudioManager.play_sfx("success")
 	_add_log("[color=#55CC70]✅ %s %sが完成！[/color]" % [
 		feature.get("icon", ""), feature.get("name", "")])
 
 
 func _on_tech_debt_warning(debt_level: int) -> void:
+	AudioManager.play_sfx("negative")
 	_add_log("[color=#E85555]⚠️ 技術的負債が危険水準に！(%d/100)[/color]" % debt_level)
 
 
 func _on_game_over(reason: String) -> void:
+	AudioManager.play_sfx("fail")
 	_add_log("[color=#E85555]%s[/color]" % reason)
 	action_btn.disabled = true
 	GameState.set_meta("forced_ending", "bankruptcy")
@@ -907,6 +919,7 @@ func _on_game_over(reason: String) -> void:
 
 
 func _on_game_clear(reason: String) -> void:
+	AudioManager.play_sfx("cash")
 	_add_log("[color=#55CC70]%s[/color]" % reason)
 	action_btn.disabled = true
 	if not GameState.has_meta("forced_ending") or GameState.get_meta("forced_ending") == "":

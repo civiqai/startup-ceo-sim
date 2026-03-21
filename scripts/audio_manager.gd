@@ -15,6 +15,10 @@ const SFX_SOUNDS := {
 	"click": "res://assets/audio/click.wav",
 	"notification": "res://assets/audio/notification.wav",
 	"turn_advance": "res://assets/audio/turn_advance.wav",
+	"cash": "res://assets/audio/cash_register.mp3",
+	"success": "res://assets/audio/success.mp3",
+	"fail": "res://assets/audio/fail.mp3",
+	"negative": "res://assets/audio/negative.mp3",
 }
 
 # BGM用AudioStreamPlayer（2つでクロスフェード）
