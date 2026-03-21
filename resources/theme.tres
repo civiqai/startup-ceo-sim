@@ -1,6 +1,7 @@
-[gd_resource type="Theme" load_steps=17 format=3 uid="uid://theme001"]
+[gd_resource type="Theme" load_steps=18 format=3 uid="uid://theme001"]
 
 [ext_resource type="FontFile" path="res://assets/fonts/NotoSansJP-Regular.ttf" id="font_noto_file"]
+[ext_resource type="FontFile" path="res://assets/fonts/NotoEmoji-Regular.ttf" id="font_emoji_file"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_depth_flat.png" id="btn_blue_normal"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_depth_border.png" id="btn_blue_hover"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_flat.png" id="btn_blue_pressed"]
@@ -12,6 +13,7 @@
 base_font = ExtResource("font_noto_file")
 variation_opentype = { "wght": 900 }
 variation_embolden = 0.6
+fallbacks = [ExtResource("font_emoji_file")]
 
 [sub_resource type="StyleBoxTexture" id="button_normal"]
 texture = ExtResource("btn_blue_normal")
