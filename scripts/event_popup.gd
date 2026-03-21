@@ -130,7 +130,7 @@ func get_effect_text() -> String:
 func _build_ui() -> void:
 	_panel_root = Control.new()
 	_panel_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_panel_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel_root)
 
 	# 暗いオーバーレイ
@@ -150,26 +150,10 @@ func _build_ui() -> void:
 	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel_root.add_child(_center)
 
-	# パネル
-	var panel_style = StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.12, 0.13, 0.18, 1.0)
-	panel_style.border_width_left = 2
-	panel_style.border_width_top = 2
-	panel_style.border_width_right = 2
-	panel_style.border_width_bottom = 2
-	panel_style.border_color = Color(0.35, 0.40, 0.55, 1.0)
-	panel_style.corner_radius_top_left = 16
-	panel_style.corner_radius_top_right = 16
-	panel_style.corner_radius_bottom_right = 16
-	panel_style.corner_radius_bottom_left = 16
-	panel_style.content_margin_left = 28
-	panel_style.content_margin_top = 24
-	panel_style.content_margin_right = 28
-	panel_style.content_margin_bottom = 24
-
+	# パネル（Kenney UIテクスチャ使用）
 	_panel = PanelContainer.new()
 	_panel.custom_minimum_size = Vector2(620, 0)
-	_panel.add_theme_stylebox_override("panel", panel_style)
+	KenneyTheme.apply_panel_style(_panel, "popup")
 	_center.add_child(_panel)
 
 	# VBoxContainer

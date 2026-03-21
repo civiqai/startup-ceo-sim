@@ -39,7 +39,7 @@ var _sum_label: Label  # 合計表示
 var _roll_button: Button
 var _effect_label: Label
 var _ok_button: Button
-var _panel_style: StyleBoxFlat
+var _panel_style: StyleBox
 
 # Board layout
 const SQUARE_W := 130
@@ -89,7 +89,8 @@ func show_board(type_id: String) -> void:
 
 	# パネルのボーダーカラーをタイプの色に変更
 	var type_color: Color = type_data.get("color", Color(0.25, 0.45, 0.30))
-	_panel_style.border_color = type_color
+	if _panel_style is StyleBoxFlat:
+		_panel_style.border_color = type_color
 
 	# ダイス表示リセット
 	for i in range(3):
@@ -326,7 +327,7 @@ func _get_square_position(index: int, total: int) -> Vector2:
 func _build_ui() -> void:
 	_panel_root = Control.new()
 	_panel_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_panel_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel_root)
 
 	# 暗いオーバーレイ
@@ -342,22 +343,8 @@ func _build_ui() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel_root.add_child(center)
 
-	# パネル
-	_panel_style = StyleBoxFlat.new()
-	_panel_style.bg_color = Color(0.08, 0.10, 0.16, 1.0)
-	_panel_style.border_width_left = 2
-	_panel_style.border_width_top = 2
-	_panel_style.border_width_right = 2
-	_panel_style.border_width_bottom = 2
-	_panel_style.border_color = Color(0.25, 0.45, 0.30, 1.0)
-	_panel_style.corner_radius_top_left = 16
-	_panel_style.corner_radius_top_right = 16
-	_panel_style.corner_radius_bottom_right = 16
-	_panel_style.corner_radius_bottom_left = 16
-	_panel_style.content_margin_left = 20
-	_panel_style.content_margin_top = 18
-	_panel_style.content_margin_right = 20
-	_panel_style.content_margin_bottom = 18
+	# パネル（Kenney UIテクスチャ使用）
+	_panel_style = KenneyTheme.make_popup_panel_style()
 
 	var panel = PanelContainer.new()
 	panel.custom_minimum_size = Vector2(620, 0)
@@ -429,24 +416,13 @@ func _build_ui() -> void:
 	_sum_label.visible = false
 	vbox.add_child(_sum_label)
 
-	# サイコロを振るボタン
-	var roll_style = StyleBoxFlat.new()
-	roll_style.bg_color = Color(0.18, 0.48, 0.32)
-	roll_style.corner_radius_top_left = 10
-	roll_style.corner_radius_top_right = 10
-	roll_style.corner_radius_bottom_right = 10
-	roll_style.corner_radius_bottom_left = 10
-	roll_style.content_margin_left = 16
-	roll_style.content_margin_top = 10
-	roll_style.content_margin_right = 16
-	roll_style.content_margin_bottom = 10
-
+	# サイコロを振るボタン（Kenney グリーンスタイル）
 	_roll_button = Button.new()
 	_roll_button.text = "🎲 サイコロを振る"
 	_roll_button.custom_minimum_size = Vector2(0, 58)
 	_roll_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	_roll_button.add_theme_font_size_override("font_size", 26)
-	_roll_button.add_theme_stylebox_override("normal", roll_style)
+	KenneyTheme.apply_button_style(_roll_button, "green")
 	_roll_button.pressed.connect(_on_roll_pressed)
 	vbox.add_child(_roll_button)
 

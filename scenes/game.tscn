@@ -1,17 +1,21 @@
-[gd_scene load_steps=5 format=3 uid="uid://game"]
+[gd_scene load_steps=6 format=3 uid="uid://game"]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1"]
 [ext_resource type="Theme" path="res://resources/theme.tres" id="2"]
 [ext_resource type="Script" path="res://scripts/office_view.gd" id="3"]
+[ext_resource type="Texture2D" path="res://assets/images/ui/kenney/panels/input_rectangle.png" id="header_tex"]
 
-[sub_resource type="StyleBoxFlat" id="header_style"]
-bg_color = Color(0.10, 0.11, 0.16, 1.0)
-border_width_bottom = 1
-border_color = Color(0.22, 0.25, 0.32, 1.0)
+[sub_resource type="StyleBoxTexture" id="header_style"]
+texture = ExtResource("header_tex")
+texture_margin_left = 24.0
+texture_margin_top = 24.0
+texture_margin_right = 24.0
+texture_margin_bottom = 24.0
 content_margin_left = 20.0
 content_margin_top = 10.0
 content_margin_right = 20.0
 content_margin_bottom = 10.0
+modulate_color = Color(0.10, 0.11, 0.16, 0.98)
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -56,23 +60,68 @@ theme_override_font_sizes/font_size = 26
 text = "💰 1000万円"
 horizontal_alignment = 2
 
+[node name="DayLabel" type="Label" parent="VBox/Header/HBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.70, 0.75, 0.85, 1.0)
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 2
+
 [node name="OfficeView" type="Control" parent="VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 custom_minimum_size = Vector2(0, 400)
+mouse_filter = 2
 script = ExtResource("3")
+
+[node name="SpeedBar" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+visible = false
+theme_override_constants/separation = 4
+alignment = 1
+
+[node name="Speed1x" type="Button" parent="VBox/SpeedBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 40)
+theme_override_font_sizes/font_size = 18
+text = "1x"
+disabled = true
+
+[node name="Speed2x" type="Button" parent="VBox/SpeedBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 40)
+theme_override_font_sizes/font_size = 18
+text = "2x"
+
+[node name="Speed4x" type="Button" parent="VBox/SpeedBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 40)
+theme_override_font_sizes/font_size = 18
+text = "4x"
+
+[node name="PauseBtn" type="Button" parent="VBox/SpeedBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 40)
+theme_override_font_sizes/font_size = 18
+text = "⏸️"
+
+[node name="OvertimeBtn" type="Button" parent="VBox/SpeedBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 40)
+theme_override_font_sizes/font_size = 16
+text = "残業OFF"
 
 [node name="LogTicker" type="PanelContainer" parent="VBox"]
 layout_mode = 2
 
 [node name="LogLabel" type="RichTextLabel" parent="VBox/LogTicker"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 60)
+custom_minimum_size = Vector2(0, 120)
 theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 text = "さあ、経営を始めよう！"
 scroll_following = true
-scroll_active = false
+scroll_active = true
 
 [node name="ActionBar" type="MarginContainer" parent="VBox"]
 layout_mode = 2
@@ -81,59 +130,22 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="ActionBtn" type="Button" parent="VBox/ActionBar"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
-theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 26
-text = "アクション選択"
-
-[node name="ActionMenu" type="VBoxContainer" parent="VBox"]
-layout_mode = 2
-visible = false
-theme_override_constants/separation = 6
-
-[node name="Margin" type="MarginContainer" parent="VBox/ActionMenu"]
-layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 12
-
-[node name="Buttons" type="VBoxContainer" parent="VBox/ActionMenu/Margin"]
+[node name="HBox" type="HBoxContainer" parent="VBox/ActionBar"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="DevelopBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
+[node name="ActionBtn" type="Button" parent="VBox/ActionBar/HBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 64)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 22
-text = "🔨 開発に集中"
+theme_override_font_sizes/font_size = 26
+text = "アクション選択 ▲"
 
-[node name="HireBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
+[node name="TeamBtn" type="Button" parent="VBox/ActionBar/HBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
+custom_minimum_size = Vector2(120, 64)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
 theme_override_font_sizes/font_size = 22
-text = "👤 採用する (200万円)"
+text = "👥 1人"
 
-[node name="MarketingBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
-theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 22
-text = "📣 マーケティング (100万円)"
-
-[node name="FundraiseBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
-theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 22
-text = "💵 資金調達"
-
-[node name="TeamCareBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
-theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 22
-text = "❤️ チームケア"

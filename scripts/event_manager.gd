@@ -108,6 +108,7 @@ func _register_all_events() -> void:
 	_register_product_events()
 	_register_market_events()
 	_register_random_events()
+	_register_bizdev_events()
 
 
 # ============================================================
@@ -164,7 +165,7 @@ func _register_management_events() -> void:
 				"label": "受注する（資金+2000万、プロダクト力-5）",
 				"effect": func(gs):
 					gs.cash += 2000
-					gs.product_power = maxi(gs.product_power - 5, 0)
+					gs.add_product_power(-5)
 					return "大型契約を締結！カスタマイズ対応でプロダクト力が少し下がった。",
 				"chain_event_id": "big_contract_followup",
 			},
@@ -253,6 +254,82 @@ func _register_management_events() -> void:
 		],
 	}
 
+	events["vc_direction_change"] = {
+		"id": "vc_direction_change",
+		"title": "VCからの方向転換要請",
+		"description": "主要投資家から事業の方向転換を求められた。「もっとB2B寄りにピボットすべきだ」",
+		"category": Category.MANAGEMENT,
+		"weight": 0.8,
+		"condition": func(gs): return gs.equity_share < 80.0 and gs.equity_share > 0,
+		"choices": [
+			{
+				"label": "受け入れる（士気-15、評判+10）",
+				"effect": func(gs):
+					gs.team_morale = maxi(gs.team_morale - 15, 0)
+					gs.reputation = mini(gs.reputation + 10, 100)
+					return "VCの要請を受け入れた。チームの士気が下がった。",
+			},
+			{
+				"label": "拒否する（評判-20）",
+				"effect": func(gs):
+					gs.reputation = maxi(gs.reputation - 20, 0)
+					return "VCの要請を拒否。関係が悪化した。",
+			},
+		],
+	}
+
+	events["vc_board_seat"] = {
+		"id": "vc_board_seat",
+		"title": "取締役会の圧力",
+		"description": "投資家が取締役の派遣を要求している。経営の自由度が制限される可能性が…",
+		"category": Category.MANAGEMENT,
+		"weight": 0.6,
+		"condition": func(gs): return gs.equity_share < 60.0,
+		"choices": [
+			{
+				"label": "受け入れる（評判+15、士気-10）",
+				"effect": func(gs):
+					gs.reputation = mini(gs.reputation + 15, 100)
+					gs.team_morale = maxi(gs.team_morale - 10, 0)
+					return "社外取締役を受け入れた。投資家との関係は改善したが…",
+			},
+			{
+				"label": "拒否する（評判-10）",
+				"effect": func(gs):
+					gs.reputation = maxi(gs.reputation - 10, 0)
+					return "自主独立を貫いた。",
+			},
+		],
+	}
+
+	events["loss_of_control"] = {
+		"id": "loss_of_control",
+		"title": "経営権の危機",
+		"description": "持ち株比率が50%を切り、投資家陣営が経営陣の交代を要求している！",
+		"category": Category.MANAGEMENT,
+		"weight": 1.5,
+		"condition": func(gs): return gs.equity_share < 50.0,
+		"choices": [
+			{
+				"label": "株式の買い戻し（資金-2000万）",
+				"effect": func(gs):
+					if gs.cash >= 2000:
+						gs.cash -= 2000
+						gs.equity_share = minf(gs.equity_share + 10.0, 100.0)
+						return "2000万円で10%%の株式を買い戻した。持株 %.1f%%" % gs.equity_share
+					else:
+						gs.team_morale = maxi(gs.team_morale - 20, 0)
+						return "資金不足で買い戻せなかった…士気 -20",
+			},
+			{
+				"label": "受け入れて経営を続ける（士気-25）",
+				"effect": func(gs):
+					gs.team_morale = maxi(gs.team_morale - 25, 0)
+					return "投資家の影響力が増大。チーム全体が動揺している。",
+			},
+		],
+	}
+
 # ============================================================
 # チーム系イベント
 # ============================================================
@@ -269,8 +346,8 @@ func _register_team_events() -> void:
 				"label": "高待遇で迎える（資金-400万、チーム+1、プロダクト力+15）",
 				"effect": func(gs):
 					gs.cash -= 400
-					gs.team_size += 1
-					gs.product_power = mini(gs.product_power + 15, 100)
+					gs.add_random_member()
+					gs.add_product_power(15)
 					gs.team_morale = mini(gs.team_morale + 10, 100)
 					return "エースエンジニアが参画！プロダクト力が大幅UP。",
 			},
@@ -278,8 +355,8 @@ func _register_team_events() -> void:
 				"label": "通常条件で提案（50%で入社）",
 				"effect": func(gs):
 					if randf() < 0.5:
-						gs.team_size += 1
-						gs.product_power = mini(gs.product_power + 10, 100)
+						gs.add_random_member()
+						gs.add_product_power(10)
 						return "交渉成功！エースがチームに加わった。"
 					else:
 						return "条件が合わず、辞退されてしまった。",
@@ -299,7 +376,7 @@ func _register_team_events() -> void:
 				"label": "話し合いの場を設ける（士気+5、プロダクト力-3）",
 				"effect": func(gs):
 					gs.team_morale = mini(gs.team_morale + 5, 100)
-					gs.product_power = maxi(gs.product_power - 3, 0)
+					gs.add_product_power(-3)
 					return "時間はかかったが、チームの結束が強まった。",
 			},
 			{
@@ -321,7 +398,7 @@ func _register_team_events() -> void:
 		"effect": func(gs):
 			gs.reputation = mini(gs.reputation + 15, 100)
 			gs.team_morale = mini(gs.team_morale + 10, 100)
-			gs.product_power = mini(gs.product_power + 5, 100)
+			gs.add_product_power(5)
 			return "評判+15、士気+10、プロダクト力+5",
 	}
 
@@ -336,7 +413,7 @@ func _register_team_events() -> void:
 			{
 				"label": "休暇を与える（プロダクト力-5、士気+25）",
 				"effect": func(gs):
-					gs.product_power = maxi(gs.product_power - 5, 0)
+					gs.add_product_power(-5)
 					gs.team_morale = mini(gs.team_morale + 25, 100)
 					return "リフレッシュ休暇で士気が回復した。",
 			},
@@ -344,7 +421,7 @@ func _register_team_events() -> void:
 				"label": "そのまま続行（30%でメンバー離脱）",
 				"effect": func(gs):
 					if randf() < 0.3 and gs.team_size > 1:
-						gs.team_size -= 1
+						gs.remove_random_member()
 						gs.team_morale = maxi(gs.team_morale - 10, 0)
 						return "限界を迎えたメンバーが退職してしまった…"
 					else:
@@ -372,7 +449,7 @@ func _register_team_events() -> void:
 			{
 				"label": "送り出す（チーム-1、士気-10）",
 				"effect": func(gs):
-					gs.team_size -= 1
+					gs.remove_random_member()
 					gs.team_morale = maxi(gs.team_morale - 10, 0)
 					return "メンバーが去った。残されたチームの士気が下がった。",
 			},
@@ -389,12 +466,15 @@ func _register_product_events() -> void:
 		"description": "本番環境で重大なバグが見つかった！ユーザーから苦情が殺到している。",
 		"category": Category.PRODUCT,
 		"weight": 1.0,
-		"condition": func(gs): return gs.users >= 50,
+		"condition": func(gs):
+			var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
+			var debt = pm.tech_debt if pm != null else 30
+			return gs.users >= 50 and debt >= 30,
 		"choices": [
 			{
 				"label": "全力で修正（プロダクト力-5、ユーザー減少小）",
 				"effect": func(gs):
-					gs.product_power = maxi(gs.product_power - 5, 0)
+					gs.add_product_power(-5)
 					var lost = randi_range(10, 30)
 					gs.users = maxi(gs.users - lost, 0)
 					gs.brand_value = maxi(gs.brand_value - 5, 0)
@@ -421,7 +501,7 @@ func _register_product_events() -> void:
 		"condition": func(gs): return gs.product_power >= 50,
 		"effect": func(gs):
 			gs.reputation = mini(gs.reputation + 20, 100)
-			gs.product_power = mini(gs.product_power + 5, 100)
+			gs.add_product_power(5)
 			return "評判+20、プロダクト力+5。技術力が広く認められた！",
 	}
 
@@ -510,6 +590,70 @@ func _register_product_events() -> void:
 			return "ユーザー +%d人、評判+10" % gain,
 	}
 
+	events["minor_bug"] = {
+		"id": "minor_bug",
+		"title": "バグ報告",
+		"description": "ユーザーから複数のバグ報告が上がっている。技術的負債の影響か…",
+		"category": Category.PRODUCT,
+		"weight": 1.2,
+		"condition": func(gs):
+			var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
+			return pm != null and pm.tech_debt >= 50 and pm.tech_debt < 70,
+		"effect": func(gs):
+			var lost = randi_range(50, 200)
+			gs.users = maxi(gs.users - lost, 0)
+			gs.team_morale = maxi(gs.team_morale - 5, 0)
+			return "ユーザー離脱 -%d人、士気 -5" % lost,
+	}
+
+	events["major_incident"] = {
+		"id": "major_incident",
+		"title": "重大システム障害",
+		"description": "サービスが数時間ダウンした！技術的負債が限界に達している。",
+		"category": Category.PRODUCT,
+		"weight": 1.5,
+		"condition": func(gs):
+			var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
+			return pm != null and pm.tech_debt >= 70 and pm.tech_debt < 90,
+		"choices": [
+			{
+				"label": "緊急対応する（資金-300万、負債-20）",
+				"effect": func(gs):
+					gs.cash -= 300
+					var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
+					if pm: pm.tech_debt = maxi(pm.tech_debt - 20, 0)
+					gs.users = maxi(gs.users - randi_range(200, 500), 0)
+					return "緊急パッチで復旧。ユーザー離脱あり。",
+			},
+			{
+				"label": "様子を見る（ユーザー大量離脱）",
+				"effect": func(gs):
+					var lost = randi_range(500, 1500)
+					gs.users = maxi(gs.users - lost, 0)
+					gs.reputation = maxi(gs.reputation - 10, 0)
+					return "復旧に時間がかかり、%d人のユーザーが離脱。評判 -10" % lost,
+			},
+		],
+	}
+
+	events["system_down"] = {
+		"id": "system_down",
+		"title": "大規模システムダウン",
+		"description": "技術的負債が爆発！サービス全体が丸1日停止した。ニュースにもなっている…",
+		"category": Category.PRODUCT,
+		"weight": 2.0,
+		"condition": func(gs):
+			var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
+			return pm != null and pm.tech_debt >= 90,
+		"effect": func(gs):
+			var lost = randi_range(1000, 5000)
+			gs.users = maxi(gs.users - lost, 0)
+			gs.reputation = maxi(gs.reputation - 20, 0)
+			gs.brand_value = maxi(gs.brand_value - 15, 0)
+			gs.team_morale = maxi(gs.team_morale - 15, 0)
+			return "大規模障害で%d人離脱！評判-20、ブランド-15、士気-15" % lost,
+	}
+
 # ============================================================
 # 市場系イベント
 # ============================================================
@@ -540,7 +684,7 @@ func _register_market_events() -> void:
 				"label": "コスト削減する（チーム-1、資金節約）",
 				"effect": func(gs):
 					if gs.team_size > 1:
-						gs.team_size -= 1
+						gs.remove_random_member()
 						gs.team_morale = maxi(gs.team_morale - 15, 0)
 						return "苦渋の決断でリストラを実施。"
 					else:
@@ -604,7 +748,7 @@ func _register_market_events() -> void:
 			{
 				"label": "見送る（開発に集中、プロダクト力+5）",
 				"effect": func(gs):
-					gs.product_power = mini(gs.product_power + 5, 100)
+					gs.add_product_power(5)
 					return "登壇を見送り開発に集中した。プロダクト力+5",
 			},
 		],
@@ -648,7 +792,7 @@ func _register_random_events() -> void:
 			{
 				"label": "リモートワークに切り替え（プロダクト力-3）",
 				"effect": func(gs):
-					gs.product_power = maxi(gs.product_power - 3, 0)
+					gs.add_product_power(-3)
 					return "リモートで対応したが、開発効率は少し落ちた。",
 			},
 			{
@@ -696,7 +840,7 @@ func _register_random_events() -> void:
 			{
 				"label": "丁重にお断り（ステルスモード維持）",
 				"effect": func(gs):
-					gs.product_power = mini(gs.product_power + 3, 100)
+					gs.add_product_power(3)
 					return "開発に集中。プロダクト力+3",
 			},
 		],
@@ -710,7 +854,7 @@ func _register_random_events() -> void:
 		"weight": 0.4,
 		"condition": func(gs): return gs.team_size >= 3,
 		"effect": func(gs):
-			gs.product_power = mini(gs.product_power + 10, 100)
+			gs.add_product_power(10)
 			gs.team_morale = mini(gs.team_morale + 10, 100)
 			return "プロダクト力+10、士気+10。若い才能に脱帽！",
 	}
@@ -744,8 +888,166 @@ func _register_random_events() -> void:
 		"category": Category.RANDOM,
 		"weight": 0.5,
 		"effect": func(gs):
-			gs.product_power = maxi(gs.product_power - 3, 0)
+			gs.add_product_power(-3)
 			var lost = randi_range(10, 50)
 			gs.users = maxi(gs.users - lost, 0)
 			return "プロダクト力-3、ユーザー-%d人。復旧に丸一日かかった。" % lost,
+	}
+
+# ============================================================
+# BizDev協業イベント（BizDevメンバーがいる場合に発生）
+# ============================================================
+func _register_bizdev_events() -> void:
+	events["bizdev_collab_saas"] = {
+		"id": "bizdev_collab_saas",
+		"title": "SaaS企業との協業提案",
+		"description": "大手SaaS企業から、API連携による協業の提案が来た。BizDevチームが交渉中だ。",
+		"category": Category.MANAGEMENT,
+		"weight": 0.8,
+		"condition": func(gs): return TeamManager.get_skill_bonus("bizdev") >= 2,
+		"choices": [
+			{
+				"label": "協業する（売上+150万、ブランド+8、開発工数あり）",
+				"effect": func(gs):
+					gs.cash += 150
+					gs.brand_value = mini(gs.brand_value + 8, 100)
+					gs.add_product_power(-3)
+					return "SaaS協業が成立！売上+150万、ブランド+8（開発工数で力-3）",
+			},
+			{
+				"label": "見送る（評判+5）",
+				"effect": func(gs):
+					gs.reputation = mini(gs.reputation + 5, 100)
+					return "慎重な判断が評価された。評判+5",
+			},
+		],
+	}
+
+	events["bizdev_reseller"] = {
+		"id": "bizdev_reseller",
+		"title": "代理店契約のオファー",
+		"description": "販売代理店が自社プロダクトを取り扱いたいと申し出ている。",
+		"category": Category.MANAGEMENT,
+		"weight": 0.7,
+		"condition": func(gs): return TeamManager.get_skill_bonus("bizdev") >= 3 and gs.product_power >= 25,
+		"choices": [
+			{
+				"label": "契約する（毎月の売上基盤UP、ユーザー+200）",
+				"effect": func(gs):
+					var revenue_boost = randi_range(100, 250)
+					gs.cash += revenue_boost
+					gs.users += 200
+					gs.brand_value = mini(gs.brand_value + 5, 100)
+					return "代理店契約成立！売上+%d万、ユーザー+200、ブランド+5" % revenue_boost,
+			},
+			{
+				"label": "条件交渉する（50%で好条件、50%で破談）",
+				"effect": func(gs):
+					if randf() < 0.5:
+						var revenue_boost = randi_range(200, 400)
+						gs.cash += revenue_boost
+						gs.users += 300
+						gs.brand_value = mini(gs.brand_value + 8, 100)
+						return "好条件で合意！売上+%d万、ユーザー+300" % revenue_boost
+					else:
+						gs.reputation = maxi(gs.reputation - 5, 0)
+						return "交渉決裂…評判-5",
+			},
+		],
+	}
+
+	events["bizdev_govt_contract"] = {
+		"id": "bizdev_govt_contract",
+		"title": "官公庁案件",
+		"description": "BizDevチームが自治体のDX案件を発見。入札に参加できそうだ。",
+		"category": Category.MANAGEMENT,
+		"weight": 0.5,
+		"condition": func(gs): return TeamManager.get_skill_bonus("bizdev") >= 4 and gs.reputation >= 40,
+		"choices": [
+			{
+				"label": "入札する（資金-100万、70%で大型案件獲得）",
+				"effect": func(gs):
+					gs.cash -= 100
+					if randf() < 0.7:
+						var contract_value = randi_range(500, 1000)
+						gs.cash += contract_value
+						gs.reputation = mini(gs.reputation + 15, 100)
+						return "落札成功！官公庁案件 +%d万円、評判+15" % contract_value
+					else:
+						return "惜しくも落選…入札費用-100万",
+			},
+			{
+				"label": "見送る",
+				"effect": func(gs):
+					return "今回は見送った。",
+			},
+		],
+	}
+
+	events["bizdev_overseas_lead"] = {
+		"id": "bizdev_overseas_lead",
+		"title": "海外企業からの問い合わせ",
+		"description": "海外のテック企業から製品への問い合わせが来た。BizDevが対応している。",
+		"category": Category.MARKET,
+		"weight": 0.6,
+		"condition": func(gs): return TeamManager.get_skill_bonus("bizdev") >= 3 and gs.users >= 1000,
+		"choices": [
+			{
+				"label": "商談を進める（売上+200万、ブランド+10）",
+				"effect": func(gs):
+					gs.cash += 200
+					gs.brand_value = mini(gs.brand_value + 10, 100)
+					gs.reputation = mini(gs.reputation + 8, 100)
+					gs.users += randi_range(100, 300)
+					return "海外との取引が成立！売上+200万、ブランド+10、海外ユーザー獲得",
+			},
+			{
+				"label": "国内に集中する",
+				"effect": func(gs):
+					gs.add_product_power(3)
+					return "国内市場に集中。プロダクト力+3",
+			},
+		],
+	}
+
+	events["bizdev_revenue_share"] = {
+		"id": "bizdev_revenue_share",
+		"title": "レベニューシェア提案",
+		"description": "有力企業からレベニューシェアモデルでの提携を持ちかけられた。",
+		"category": Category.MANAGEMENT,
+		"weight": 0.7,
+		"condition": func(gs): return TeamManager.get_skill_bonus("bizdev") >= 2 and gs.product_power >= 30,
+		"choices": [
+			{
+				"label": "提携する（売上シェア開始、ユーザー大幅増）",
+				"effect": func(gs):
+					var user_gain = randi_range(200, 500)
+					var rev_share = randi_range(80, 200)
+					gs.users += user_gain
+					gs.cash += rev_share
+					gs.brand_value = mini(gs.brand_value + 6, 100)
+					return "レベニューシェア提携成立！ユーザー+%d、売上+%d万" % [user_gain, rev_share],
+			},
+			{
+				"label": "独自路線を貫く（プロダクト力+5）",
+				"effect": func(gs):
+					gs.add_product_power(5)
+					return "独立した路線で勝負。プロダクト力+5",
+			},
+		],
+	}
+
+	# COOがいる場合のボーナスイベント
+	events["coo_optimization"] = {
+		"id": "coo_optimization",
+		"title": "COOによる業務改善",
+		"description": "COOが業務プロセスの最適化を提案。コスト削減と効率化が見込める。",
+		"category": Category.MANAGEMENT,
+		"weight": 0.8,
+		"condition": func(gs): return TeamManager.has_cxo("bizdev"),
+		"effect": func(gs):
+			var cost_save = randi_range(50, 150)
+			gs.cash += cost_save
+			gs.team_morale = mini(gs.team_morale + 5, 100)
+			return "業務最適化でコスト削減 +%d万円、士気+5" % cost_save,
 	}

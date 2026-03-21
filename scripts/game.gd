@@ -2,28 +2,77 @@ extends Control
 ## メインゲーム画面
 
 const FundraiseTypes = preload("res://scripts/fundraise_types.gd")
+const MarketingChannels = preload("res://scripts/marketing_channels.gd")
+const TeamMemberClass = preload("res://scripts/team_member.gd")
 
 var turn_manager: Node
 var log_text: String = ""
 var debug_panel: Node = null
 var sugoroku_popup: Node
 var fundraise_select_popup: Node
-var _menu_open := false
+var marketing_select_popup: Node
+var hire_popup: Node
+var team_list_popup: Node
+var member_detail_popup: Node
+var milestone_manager: Node
+var milestone_popup: Node
+var secretary_popup: Node
+var save_load_popup: Node
+var day_cycle: Node
+var phase_manager: Node
+var product_manager: Node
+var product_dev_popup: Node
+var investor_manager: Node
+var competitor_manager: Node
+var achievement_manager: Node
+var achievement_popup: Node
+var ending_manager: Node
+var action_menu_popup: Node
+var history_popup: Node
+var monthly_log: Array[Dictionary] = []
+var _current_month_events: Array = []
 
 @onready var month_label := $VBox/Header/HBox/MonthLabel
 @onready var cash_label := $VBox/Header/HBox/CashLabel
 @onready var office_view := $VBox/OfficeView
 @onready var log_label := $VBox/LogTicker/LogLabel
-@onready var action_btn := $VBox/ActionBar/ActionBtn
-@onready var action_menu := $VBox/ActionMenu
-@onready var buttons := $VBox/ActionMenu/Margin/Buttons
+@onready var action_btn := $VBox/ActionBar/HBox/ActionBtn
+@onready var team_btn := $VBox/ActionBar/HBox/TeamBtn
+@onready var day_label := $VBox/Header/HBox/DayLabel
+@onready var speed_bar := $VBox/SpeedBar
 var event_popup: Node
+var _pending_marketing_result: Dictionary = {}
+var _pending_contract_selection: bool = false
 
 
 func _ready() -> void:
 	turn_manager = preload("res://scripts/turn_manager.gd").new()
 	turn_manager.name = "TurnManager"
 	add_child(turn_manager)
+
+	# 24時間サイクル管理
+	day_cycle = preload("res://scripts/day_cycle.gd").new()
+	day_cycle.name = "DayCycle"
+	add_child(day_cycle)
+	day_cycle.hour_changed.connect(_on_hour_changed)
+	day_cycle.day_started.connect(_on_day_started)
+	day_cycle.day_ended.connect(_on_day_ended)
+	day_cycle.month_completed.connect(_on_month_completed)
+
+	# フェーズ管理
+	phase_manager = preload("res://scripts/phase_manager.gd").new()
+	phase_manager.name = "PhaseManager"
+	add_child(phase_manager)
+	phase_manager.phase_changed.connect(_on_phase_changed)
+
+	# 速度制御ボタン（シーンにある場合のみ接続）
+	if has_node("VBox/SpeedBar"):
+		speed_bar.get_node("Speed1x").pressed.connect(_on_speed_1x_pressed)
+		speed_bar.get_node("Speed2x").pressed.connect(_on_speed_2x_pressed)
+		speed_bar.get_node("Speed4x").pressed.connect(_on_speed_4x_pressed)
+		speed_bar.get_node("PauseBtn").pressed.connect(_on_pause_pressed)
+		speed_bar.get_node("OvertimeBtn").pressed.connect(_on_overtime_pressed)
+		speed_bar.visible = false  # シミュレーション中のみ表示
 
 	# EventPopupをCanvasLayerとしてコードから生成（最前面保証）
 	var EventPopupScript = load("res://scripts/event_popup.gd")
@@ -39,15 +88,19 @@ func _ready() -> void:
 	GameState.game_over.connect(_on_game_over)
 	GameState.game_clear.connect(_on_game_clear)
 
+	# アクションメニューポップアップ（CanvasLayer）
+	var ActionMenuScript = load("res://scripts/action_menu_popup.gd")
+	action_menu_popup = CanvasLayer.new()
+	action_menu_popup.set_script(ActionMenuScript)
+	add_child(action_menu_popup)
+	action_menu_popup.action_selected.connect(_do_action)
+	action_menu_popup.menu_closed.connect(_on_action_menu_closed)
+
 	# アクションメニュートグル
 	action_btn.pressed.connect(_toggle_action_menu)
 
-	# アクションボタン
-	buttons.get_node("DevelopBtn").pressed.connect(func(): _do_action("develop"))
-	buttons.get_node("HireBtn").pressed.connect(func(): _do_action("hire"))
-	buttons.get_node("MarketingBtn").pressed.connect(func(): _do_action("marketing"))
-	buttons.get_node("FundraiseBtn").pressed.connect(func(): _do_action("fundraise"))
-	buttons.get_node("TeamCareBtn").pressed.connect(func(): _do_action("team_care"))
+	# チーム一覧ボタン
+	team_btn.pressed.connect(_on_team_btn_pressed)
 
 	event_popup.popup_closed.connect(_on_event_popup_closed)
 
@@ -66,9 +119,130 @@ func _ready() -> void:
 	fundraise_select_popup.type_selected.connect(_on_fundraise_type_selected)
 	fundraise_select_popup.cancelled.connect(_on_fundraise_cancelled)
 
+	# マーケティングチャネル選択ポップアップ
+	var MarketingSelectScript = load("res://scripts/marketing_select_popup.gd")
+	marketing_select_popup = CanvasLayer.new()
+	marketing_select_popup.set_script(MarketingSelectScript)
+	add_child(marketing_select_popup)
+	marketing_select_popup.channel_selected.connect(_on_marketing_channel_selected)
+	marketing_select_popup.cancelled.connect(_on_marketing_cancelled)
+
+	# 採用ポップアップ
+	var HirePopupScript = load("res://scripts/hire_popup.gd")
+	hire_popup = CanvasLayer.new()
+	hire_popup.set_script(HirePopupScript)
+	add_child(hire_popup)
+	hire_popup.hire_completed.connect(_on_hire_completed)
+	hire_popup.hire_cancelled.connect(_on_hire_cancelled)
+
+	# チーム一覧ポップアップ
+	var TeamListScript = load("res://scripts/team_list_popup.gd")
+	team_list_popup = CanvasLayer.new()
+	team_list_popup.set_script(TeamListScript)
+	add_child(team_list_popup)
+	team_list_popup.member_selected.connect(_on_team_member_selected)
+	team_list_popup.popup_closed.connect(_on_team_list_closed)
+
+	# メンバー詳細ポップアップ
+	var MemberDetailScript = load("res://scripts/member_detail_popup.gd")
+	member_detail_popup = CanvasLayer.new()
+	member_detail_popup.set_script(MemberDetailScript)
+	add_child(member_detail_popup)
+	member_detail_popup.member_promoted.connect(_on_member_promoted)
+	member_detail_popup.member_fired.connect(_on_member_fired)
+	member_detail_popup.popup_closed.connect(_on_member_detail_closed)
+
+	# マイルストーン管理
+	var MilestoneManagerScript = load("res://scripts/milestone_manager.gd")
+	milestone_manager = Node.new()
+	milestone_manager.set_script(MilestoneManagerScript)
+	add_child(milestone_manager)
+
+	# マイルストーンポップアップ
+	var MilestonePopupScript = load("res://scripts/milestone_popup.gd")
+	milestone_popup = CanvasLayer.new()
+	milestone_popup.set_script(MilestonePopupScript)
+	add_child(milestone_popup)
+	milestone_popup.popup_closed.connect(_on_milestone_popup_closed)
+
+	# 秘書ポップアップ
+	var SecretaryPopupScript = load("res://scripts/secretary_popup.gd")
+	secretary_popup = CanvasLayer.new()
+	secretary_popup.set_script(SecretaryPopupScript)
+	add_child(secretary_popup)
+	secretary_popup.dialogue_finished.connect(_on_secretary_finished)
+
+	# セーブ/ロードポップアップ
+	var SaveLoadScript = load("res://scripts/save_load_popup.gd")
+	save_load_popup = CanvasLayer.new()
+	save_load_popup.set_script(SaveLoadScript)
+	add_child(save_load_popup)
+	save_load_popup.save_completed.connect(_on_save_completed)
+	save_load_popup.load_completed.connect(_on_load_completed)
+
+	# プロダクト開発管理
+	product_manager = preload("res://scripts/product_manager.gd").new()
+	product_manager.name = "ProductManager"
+	add_child(product_manager)
+	product_manager.feature_completed.connect(_on_feature_completed)
+	product_manager.tech_debt_warning.connect(_on_tech_debt_warning)
+
+	# プロダクト開発ポップアップ
+	var ProductDevScript = load("res://scripts/product_dev_popup.gd")
+	product_dev_popup = CanvasLayer.new()
+	product_dev_popup.set_script(ProductDevScript)
+	add_child(product_dev_popup)
+	product_dev_popup.set_product_manager(product_manager)
+	product_dev_popup.feature_selected.connect(_on_feature_dev_selected)
+	product_dev_popup.debt_repair_selected.connect(_on_debt_repair_selected)
+	product_dev_popup.cancelled.connect(_on_product_dev_cancelled)
+
+	# 投資家管理
+	investor_manager = preload("res://scripts/investor_manager.gd").new()
+	investor_manager.name = "InvestorManager"
+	add_child(investor_manager)
+	investor_manager.investor_mood_changed.connect(_on_investor_mood_changed)
+
+	# 競合・市場管理
+	competitor_manager = preload("res://scripts/competitor_manager.gd").new()
+	competitor_manager.name = "CompetitorManager"
+	add_child(competitor_manager)
+	competitor_manager.competitor_news.connect(_on_competitor_news)
+
+	# 実績管理
+	achievement_manager = preload("res://scripts/achievement_manager.gd").new()
+	achievement_manager.name = "AchievementManager"
+	add_child(achievement_manager)
+
+	# 実績ポップアップ
+	var AchievementPopupScript = load("res://scripts/achievement_popup.gd")
+	achievement_popup = CanvasLayer.new()
+	achievement_popup.set_script(AchievementPopupScript)
+	add_child(achievement_popup)
+
+	# エンディング管理
+	ending_manager = preload("res://scripts/ending_manager.gd").new()
+	ending_manager.name = "EndingManager"
+	add_child(ending_manager)
+
+	# 履歴ポップアップ
+	var HistoryPopupScript = load("res://scripts/history_popup.gd")
+	history_popup = CanvasLayer.new()
+	history_popup.set_script(HistoryPopupScript)
+	add_child(history_popup)
+
+	# オフィスビューのメンバータップ → 詳細ポップアップ
+	office_view.member_tapped.connect(_on_team_member_selected)
+
 	_add_log("さあ、経営を始めよう！")
 	_update_ui()
 	AudioManager.play_bgm("game")
+
+	# 秘書の状態をリセットしてチュートリアル開始
+	secretary_popup.reset()
+	# チュートリアルガイドモード: tutorial_month == 0 なら game_start トリガー発火
+	if GameState.tutorial_month == 0:
+		secretary_popup.check_tutorial(GameState, "game_start")
 
 	# デバッグパネルを追加
 	_setup_debug_panel()
@@ -91,23 +265,79 @@ func _setup_debug_panel() -> void:
 
 func _toggle_action_menu() -> void:
 	AudioManager.play_sfx("click")
-	_menu_open = not _menu_open
-	action_menu.visible = _menu_open
-	action_btn.text = "閉じる ▼" if _menu_open else "アクション選択 ▲"
+	if action_menu_popup.is_open():
+		action_menu_popup.hide_menu()
+		action_btn.text = "アクション選択 ▲"
+	else:
+		action_menu_popup.show_menu()
+		action_btn.text = "閉じる ▼"
+
+
+func _on_action_menu_closed() -> void:
+	action_btn.text = "アクション選択 ▲"
 
 
 func _do_action(action: String) -> void:
-	AudioManager.play_sfx("click")
-	# メニューを閉じる
-	_menu_open = false
-	action_menu.visible = false
 	action_btn.text = "アクション選択 ▲"
 	action_btn.disabled = true
 
-	if action == "fundraise":
+	# チャレンジモードのアクション制限
+	if not DifficultyManager.is_action_allowed(action):
+		_add_log("[color=#E85555]このチャレンジではそのアクションは使えません。[/color]")
+		action_btn.disabled = false
+		return
+
+	if action == "history":
+		history_popup.show_history(monthly_log)
+		action_btn.disabled = false
+		return
+
+	if action == "contract_work":
+		_show_contract_selection()
+		return
+	elif action == "fundraise":
 		fundraise_select_popup.show_selection()
+	elif action == "hire":
+		# 採用ポップアップを表示
+		hire_popup.show_candidates([])
+	elif action == "marketing":
+		marketing_select_popup.show_selection()
 	else:
-		turn_manager.execute_turn(action)
+		if action == "develop" and product_manager.selected_product_type != "":
+			product_dev_popup.show_features()
+		else:
+			# 24時間サイクルでシミュレーション
+			if speed_bar:
+				speed_bar.visible = true
+			day_cycle.start_month(action)
+
+
+func _show_contract_selection() -> void:
+	var jobs = GameState.CONTRACT_JOBS.duplicate()
+	jobs.shuffle()
+	var selected = jobs.slice(0, 3)
+	var choices = []
+	for job in selected:
+		var j = job  # capture for closure
+		choices.append({
+			"label": "%s\n💰%d万円 / %dヶ月" % [j["name"], j["reward"], j["months"]],
+			"effect": func(gs):
+				gs.contract_work_remaining = j["months"]
+				gs.contract_work_name = j["name"]
+				gs.contract_work_reward = j["reward"]
+				return "%sを受注！%dヶ月間プロダクト開発が停止します。" % [j["name"], j["months"]],
+		})
+	choices.append({
+		"label": "やめておく",
+		"effect": func(gs): return "受託を見送った。",
+	})
+	var event_data = {
+		"title": "🏗️ 受託開発案件",
+		"description": "プロダクト開発は停止しますが、確実な収入とエンジニアの成長が得られます。",
+		"choices": choices,
+	}
+	_pending_contract_selection = true
+	event_popup.show_event(event_data)
 
 
 func _on_action_resolved(result_text: String) -> void:
@@ -127,6 +357,29 @@ func _on_fundraise_cancelled() -> void:
 	action_btn.disabled = false
 
 
+# --- マーケティングポップアップコールバック ---
+
+func _on_marketing_channel_selected(channel_id: String) -> void:
+	var result := MarketingChannels.apply_effect(channel_id, GameState)
+	_update_ui()
+	# 結果をイベントポップアップで表示
+	var event_data := {
+		"title": result.get("title", "マーケティング結果"),
+		"description": result.get("description", ""),
+		"category": 3,  # 市場カテゴリ
+		"choices": [],
+	}
+	# ポップアップを閉じた後にターン処理を行うため、一時変数に保存
+	_pending_marketing_result = result
+	event_popup.show_event(event_data)
+	# effect_labelを直接セット（choicesが空なのでshow_eventで自動表示される）
+	event_popup._effect_label.text = "💰 コスト: %d万円\n\n%s" % [result.get("cost", 0), result.get("effect_text", "")]
+
+
+func _on_marketing_cancelled() -> void:
+	action_btn.disabled = false
+
+
 func _on_sugoroku_closed(result_text: String) -> void:
 	var type_id = sugoroku_popup._selected_type
 	var square_idx = sugoroku_popup._target_position
@@ -137,7 +390,137 @@ func _on_sugoroku_closed(result_text: String) -> void:
 	turn_manager.execute_turn_with_result(log_msg)
 
 
+# --- 採用ポップアップコールバック ---
+
+func _on_hire_completed(member_data: Dictionary, channel: String, total_cost: int) -> void:
+	if GameState.cash < total_cost:
+		_add_log("[color=#E85555]資金が足りず採用できなかった。（必要: %d万円）[/color]" % total_cost)
+		action_btn.disabled = false
+		return
+
+	# TeamMember リソースを作成して採用
+	var member := TeamMemberClass.new()
+	member.member_name = member_data.get("name", "名無し")
+	member.skill_type = member_data.get("skill_type", "engineer")
+	member.skill_level = member_data.get("skill_level", 1)
+	member.personality = member_data.get("personality", "diligent")
+	member.avatar_id = member_data.get("avatar_id", randi_range(1, 70))
+	member.role = "member"
+	member.months_employed = 0
+	member.calculate_salary()
+
+	GameState.cash -= total_cost
+	TeamManager.hire(member)
+	GameState.team_morale -= 3  # 新人加入による軽い士気低下
+	GameState.team_morale = maxi(GameState.team_morale, 0)
+
+	var skill_label := TeamMemberClass.get_skill_label(member.skill_type)
+	var personality_label := TeamMemberClass.get_personality_label(member.personality)
+	var channel_names := {"agent": "エージェント", "referral": "リファラル", "scout": "スカウト"}
+	var channel_name: String = channel_names.get(channel, channel)
+	var log_msg := "%s（%s Lv.%d / %s）を%s経由で採用！（採用費 %d万円）" % [
+		member.member_name, skill_label, member.skill_level, personality_label, channel_name, total_cost
+	]
+	# 新メンバーからの挨拶をログメッセージに含める
+	var greeting: String = TeamMemberClass.get_greeting(member.member_name, member.skill_type, member.personality)
+	var full_msg := log_msg + "\n[color=#88BBDD]💬 %s「%s」[/color]" % [member.member_name, greeting]
+	_update_ui()
+	turn_manager.execute_turn_with_result(full_msg)
+
+
+func _on_hire_cancelled() -> void:
+	action_btn.disabled = false
+
+
+# --- チーム一覧コールバック ---
+
+func _on_team_btn_pressed() -> void:
+	AudioManager.play_sfx("click")
+	var members_data: Array = []
+	for m in TeamManager.members:
+		members_data.append({
+			"member_name": m.member_name,
+			"skill_type": m.skill_type,
+			"skill_level": m.skill_level,
+			"personality": m.personality,
+			"role": m.role,
+			"salary": m.salary,
+			"months_employed": m.months_employed,
+		})
+	team_list_popup.show_team(members_data)
+
+
+func _on_team_member_selected(member_index: int) -> void:
+	if member_index < 0 or member_index >= TeamManager.members.size():
+		return
+	var m = TeamManager.members[member_index]
+	var data := {
+		"member_name": m.member_name,
+		"skill_type": m.skill_type,
+		"skill_level": m.skill_level,
+		"personality": m.personality,
+		"role": m.role,
+		"salary": m.salary,
+		"months_employed": m.months_employed,
+		"cxo_exists_for_skill": TeamManager.has_cxo(m.skill_type),
+	}
+	member_detail_popup.show_member(data, member_index)
+
+
+func _on_team_list_closed() -> void:
+	pass
+
+
+func _on_member_promoted(member_index: int, new_role: String) -> void:
+	if member_index < 0 or member_index >= TeamManager.members.size():
+		return
+	var m = TeamManager.members[member_index]
+	var old_role_label := TeamMemberClass.get_role_label(m.role)
+	TeamManager.promote(m, new_role)
+	var new_role_label: String
+	if new_role == "cxo":
+		new_role_label = TeamMemberClass.get_cxo_title(m.skill_type)
+	else:
+		new_role_label = TeamMemberClass.get_role_label(new_role)
+	_add_log("🎉 %sが%sから%sに昇進！" % [m.member_name, old_role_label, new_role_label])
+	_update_ui()
+
+
+func _on_member_fired(member_index: int) -> void:
+	if member_index < 0 or member_index >= TeamManager.members.size():
+		return
+	var m = TeamManager.members[member_index]
+	var name_str: String = m.member_name
+	TeamManager.fire(m)
+	_add_log("👋 %sが退職しました。" % name_str)
+	_update_ui()
+
+
+func _on_member_detail_closed() -> void:
+	# チーム一覧を再表示
+	_on_team_btn_pressed()
+
+
 func _on_event_popup_closed(_choice_index: int) -> void:
+	# 受託開発選択ポップアップの場合
+	if _pending_contract_selection:
+		_pending_contract_selection = false
+		var effect_text = event_popup.get_effect_text()
+		if effect_text != "":
+			_add_log("[color=#DDA055]🏗️ %s[/color]" % effect_text)
+		_update_ui()
+		turn_manager.execute_turn_with_result(effect_text)
+		return
+
+	# マーケティング結果ポップアップの場合
+	if not _pending_marketing_result.is_empty():
+		var r = _pending_marketing_result
+		var log_msg := "📢 %s%s: %s" % [r.get("channel_icon", ""), r.get("channel_name", ""), r.get("rating", "")]
+		_pending_marketing_result = {}
+		_update_ui()
+		turn_manager.execute_turn_with_result(log_msg)
+		return
+
 	var effect_text = event_popup.get_effect_text()
 	var event_title = event_popup._event_data.get("title", "")
 	if event_title != "":
@@ -147,6 +530,11 @@ func _on_event_popup_closed(_choice_index: int) -> void:
 	_update_ui()
 	turn_manager.finish_after_event(effect_text)
 
+	# イベント後の秘書コメンタリー
+	var event_id = event_popup._event_data.get("id", "")
+	if event_id != "" and secretary_popup.has_method("show_event_commentary"):
+		secretary_popup.show_event_commentary(event_id)
+
 
 func _on_event_resolved(_effect_text: String) -> void:
 	pass
@@ -154,14 +542,315 @@ func _on_event_resolved(_effect_text: String) -> void:
 
 func _on_turn_ended() -> void:
 	AudioManager.play_sfx("turn_advance")
+
+	# 月別ログを記録
+	monthly_log.append({
+		"month": GameState.month,
+		"cash": GameState.cash,
+		"users": GameState.users,
+		"revenue": GameState.revenue,
+		"team_size": GameState.team_size,
+		"events": _current_month_events.duplicate(),
+	})
+	_current_month_events.clear()
+
+	# 受託開発中の表示
+	if GameState.contract_work_remaining > 0:
+		_add_log("[color=#DDA055]🏗️ 受託開発中: %s（残%dヶ月）[/color]" % [GameState.contract_work_name, GameState.contract_work_remaining])
 	_add_log("[color=#8899AA]— 月末: 固定費 %d万円 / 売上 %d万円 —[/color]" % [GameState.monthly_cost, GameState.revenue])
 	_update_ui()
+
+	# プロダクト開発進捗
+	var dev_result = product_manager.advance_month()
+	if dev_result != "":
+		_add_log("[color=#55CC70]%s[/color]" % dev_result)
+
+	# オートセーブ（3ターンごと）
+	if GameState.month > 0 and GameState.month % 3 == 0:
+		SaveManager.auto_save()
+
+	# 四半期イベント（3ヶ月ごと）
+	if GameState.month > 0 and GameState.month % 3 == 0:
+		_trigger_quarterly_event()
+
+	# フェーズ昇格チェック
+	var phase_up = phase_manager.check_phase_up(GameState)
+	if not phase_up.is_empty():
+		var phase_name = "%s %s" % [phase_up.get("icon", ""), phase_up.get("name", "")]
+		_add_log("[color=#FFD966]🎊 フェーズ昇格: %s[/color]" % phase_name)
+		GameState.current_phase = phase_manager.current_phase
+
+	# 投資家・メンター月次処理
+	var inv_results = investor_manager.advance_month(GameState)
+	for r in inv_results:
+		if r["type"] == "board_meeting":
+			var meeting = r["data"]
+			_add_log("[color=#8899CC]%s[/color]" % meeting["title"])
+			for msg in meeting["messages"]:
+				_add_log("[color=#8899CC]  %s[/color]" % msg)
+			GameState.team_morale = clampi(GameState.team_morale + meeting["morale_effect"], 0, 100)
+		elif r["type"] == "mentor_met":
+			var mentor = r["data"]
+			_add_log("[color=#FFD966]%s %sと出会った！「%s」[/color]" % [
+				mentor.get("icon", ""), mentor.get("name", ""), mentor.get("advice", "")])
+			investor_manager.hire_mentor(mentor["id"])
+
+	# 競合・市場月次処理
+	var comp_news = competitor_manager.advance_month(GameState)
+	for news in comp_news:
+		_add_log("[color=#7799BB]📰 %s[/color]" % news)
+	# 競争イベントチェック
+	var comp_event = competitor_manager.check_competitive_events(GameState)
+	if not comp_event.is_empty():
+		_add_log("[color=#DDA055]📊 %s[/color]" % comp_event["title"])
+		var effect_type = comp_event.get("effect", "")
+		var effect_val = comp_event.get("value", 0)
+		if effect_type == "reputation":
+			GameState.reputation = clampi(GameState.reputation + effect_val, 0, 100)
+
+	# スピードランタイムリミットチェック
+	if DifficultyManager.check_time_limit(GameState):
+		GameState.game_over.emit("タイムリミット！12ヶ月以内にIPOできなかった…")
+		return
+
+	# 特殊エンディングチェック
+	var special_endings = ending_manager.check_special_endings(GameState)
+	if not special_endings.is_empty():
+		# 最初の特殊エンディングを提案（イベントポップアップ形式）
+		var se = special_endings[0]
+		var event_data = {
+			"title": "📩 " + se.get("name", "") + "の提案",
+			"description": se.get("title", "") + "\nこの提案を受け入れますか？",
+			"choices": [
+				{
+					"label": "受け入れる",
+					"effect": func(gs):
+						gs.set_meta("forced_ending", se.get("id", ""))
+						return se.get("name", "") + "を選択！",
+				},
+				{
+					"label": "断って経営を続ける",
+					"effect": func(gs):
+						return "提案を断り、経営を続ける。",
+				},
+			],
+		}
+		event_popup.show_event(event_data)
+		return
+
+	# マイルストーンチェック
+	var milestone = milestone_manager.check_milestones(GameState)
+	if not milestone.is_empty():
+		_add_log("[color=#FFD966]🎉 %s[/color]" % milestone.get("title", ""))
+		milestone_popup.show_milestone(milestone)
+		# ポップアップが閉じてからaction_btnを有効化
+		return
+
+	# 実績チェック
+	var ach_extra := {}
+	var comp_mgr_node = get_node_or_null("CompetitorManager")
+	if comp_mgr_node:
+		ach_extra["market_share"] = comp_mgr_node.get_player_market_share(GameState)
+	ach_extra["met_mentors_count"] = investor_manager.met_mentors.size()
+	if product_manager.selected_product_type != "":
+		var type_data = product_manager.PRODUCT_TYPES.get(product_manager.selected_product_type, {})
+		var total_feats = type_data.get("features", []).size()
+		ach_extra["all_features_done"] = product_manager.developed_features.size() >= total_feats
+	var new_achievements = achievement_manager.check(GameState, ach_extra)
+	for ach in new_achievements:
+		achievement_popup.show_achievement(ach)
+		_add_log("[color=#FFD966]🏆 実績解除: %s %s[/color]" % [ach.get("icon", ""), ach.get("name", "")])
+
+	# チュートリアル進行
+	if GameState.tutorial_month >= 0:
+		GameState.tutorial_month += 1
+		if GameState.tutorial_month >= 6:
+			GameState.tutorial_month = -1  # チュートリアル完了
+			secretary_popup._tutorial_completed = true
+		else:
+			var trigger = "month_%d" % GameState.tutorial_month
+			secretary_popup.check_tutorial(GameState, trigger)
+
+	# 秘書アドバイスチェック（状況別アドバイス優先）
+	if secretary_popup.check_situation_advice(GameState):
+		return
+
 	action_btn.disabled = false
+
+
+func _on_milestone_popup_closed() -> void:
+	# マイルストーン後に秘書アドバイスをチェック
+	if secretary_popup.check_situation_advice(GameState):
+		return
+	action_btn.disabled = false
+
+
+# --- 投資家コールバック ---
+
+func _on_investor_mood_changed(investor_id: String, mood: String) -> void:
+	var inv = investor_manager.INVESTORS.get(investor_id, {})
+	var name_str = inv.get("name", "投資家")
+	match mood:
+		"unhappy":
+			_add_log("[color=#E85555]😠 %sの不満が高まっている…[/color]" % name_str)
+		"happy":
+			_add_log("[color=#55CC70]😊 %sが成長に満足しています[/color]" % name_str)
+
+
+# --- 競合・市場コールバック ---
+
+func _on_competitor_news(news_text: String) -> void:
+	pass  # ニュースは advance_month で処理済み
+
+
+# --- 秘書コールバック ---
+
+func _on_phase_changed(old_phase: int, new_phase: int) -> void:
+	var new_data = phase_manager.get_phase_data(new_phase)
+	_add_log("[color=#55CC70]%s %s — %s[/color]" % [
+		new_data.get("icon", ""), new_data.get("name", ""),
+		new_data.get("description", "")])
+
+	# フェーズ進行に連動したチュートリアル
+	secretary_popup.check_tutorial(GameState, "phase_%d" % new_phase)
+
+
+func _on_secretary_finished() -> void:
+	action_btn.disabled = false
+
+
+# --- セーブ/ロードコールバック ---
+
+func _on_save_completed(slot: String) -> void:
+	var slot_names := {"slot_1": "スロット1", "slot_2": "スロット2", "slot_3": "スロット3", "auto_save": "オートセーブ"}
+	_add_log("[color=#55CC70]💾 %sにセーブしました。[/color]" % slot_names.get(slot, slot))
+
+
+func _on_load_completed(_slot: String) -> void:
+	# ロード後にUI全体を更新
+	_update_ui()
+	log_text = ""
+	_add_log("📂 セーブデータをロードしました。")
+	# マイルストーンの達成状況をリセット（ロードしたデータに合わせて再チェック不要）
+	milestone_manager.reset()
+
+
+# --- 24時間サイクルコールバック ---
+
+func _on_hour_changed(day: int, hour: float) -> void:
+	var h = int(hour)
+	var m = int((hour - h) * 60)
+	if day_label:
+		day_label.text = "Day %d  %02d:%02d" % [day, h, m]
+	office_view.queue_redraw()
+
+
+func _on_day_started(day: int) -> void:
+	pass
+
+
+func _on_day_ended(day: int) -> void:
+	pass
+
+
+func _on_month_completed() -> void:
+	# スピードバーを非表示
+	if speed_bar:
+		speed_bar.visible = false
+	if day_label:
+		day_label.text = ""
+	# 月末処理（既存のターン処理に委譲）
+	var action = day_cycle.monthly_action
+	if action == "develop":
+		var result = "開発に集中した月。チームの成果がプロダクトに反映された。"
+		turn_manager.execute_turn_with_result(result)
+	elif action == "team_care":
+		var gain = randi_range(10, 20)
+		GameState.team_morale = mini(GameState.team_morale + gain, 100)
+		turn_manager.execute_turn_with_result("チームケアの月。士気 +%d" % gain)
+	else:
+		turn_manager.execute_turn_with_result(day_cycle.monthly_action)
+
+
+func _on_speed_1x_pressed() -> void:
+	AudioManager.play_sfx("click")
+	day_cycle.set_speed(1.0)
+	_update_speed_buttons(1.0)
+
+func _on_speed_2x_pressed() -> void:
+	AudioManager.play_sfx("click")
+	day_cycle.set_speed(2.0)
+	_update_speed_buttons(2.0)
+
+func _on_speed_4x_pressed() -> void:
+	AudioManager.play_sfx("click")
+	day_cycle.set_speed(4.0)
+	_update_speed_buttons(4.0)
+
+func _on_pause_pressed() -> void:
+	AudioManager.play_sfx("click")
+	day_cycle.toggle_pause()
+
+func _on_overtime_pressed() -> void:
+	AudioManager.play_sfx("click")
+	day_cycle.toggle_overtime()
+	GameState.overtime_enabled = day_cycle.overtime_enabled
+	if speed_bar:
+		var btn = speed_bar.get_node("OvertimeBtn")
+		btn.text = "残業ON" if day_cycle.overtime_enabled else "残業OFF"
+
+func _update_speed_buttons(current: float) -> void:
+	if not speed_bar:
+		return
+	for child in speed_bar.get_children():
+		if child is Button:
+			child.disabled = false
+	# Highlight the active speed button
+	match current:
+		1.0:
+			speed_bar.get_node("Speed1x").disabled = true
+		2.0:
+			speed_bar.get_node("Speed2x").disabled = true
+		4.0:
+			speed_bar.get_node("Speed4x").disabled = true
+
+
+# --- プロダクト開発コールバック ---
+
+func _on_feature_dev_selected(feature_id: String) -> void:
+	if product_manager.start_feature_dev(feature_id):
+		var feat = product_manager.FEATURES.get(feature_id, {})
+		_add_log("🔨 %s %sの開発を開始（%dヶ月予定）" % [
+			feat.get("icon", ""), feat.get("name", ""), feat.get("months", 1)])
+	_update_ui()
+	day_cycle.start_month("develop")
+	if speed_bar:
+		speed_bar.visible = true
+
+
+func _on_debt_repair_selected() -> void:
+	var result = product_manager.pay_tech_debt()
+	_add_log("🔧 " + result)
+	turn_manager.execute_turn_with_result(result)
+
+
+func _on_product_dev_cancelled() -> void:
+	action_btn.disabled = false
+
+
+func _on_feature_completed(feature: Dictionary) -> void:
+	_add_log("[color=#55CC70]✅ %s %sが完成！[/color]" % [
+		feature.get("icon", ""), feature.get("name", "")])
+
+
+func _on_tech_debt_warning(debt_level: int) -> void:
+	_add_log("[color=#E85555]⚠️ 技術的負債が危険水準に！(%d/100)[/color]" % debt_level)
 
 
 func _on_game_over(reason: String) -> void:
 	_add_log("[color=#E85555]%s[/color]" % reason)
 	action_btn.disabled = true
+	GameState.set_meta("forced_ending", "bankruptcy")
 	await get_tree().create_timer(2.0).timeout
 	get_node("/root/Main").change_scene("res://scenes/result.tscn")
 
@@ -169,12 +858,19 @@ func _on_game_over(reason: String) -> void:
 func _on_game_clear(reason: String) -> void:
 	_add_log("[color=#55CC70]%s[/color]" % reason)
 	action_btn.disabled = true
+	if not GameState.has_meta("forced_ending") or GameState.get_meta("forced_ending") == "":
+		GameState.set_meta("forced_ending", "ipo")
+	# ゲームクリア時の実績チェック
+	var clear_achievements = achievement_manager.check_on_clear(GameState)
+	for ach in clear_achievements:
+		achievement_popup.show_achievement(ach)
 	await get_tree().create_timer(2.0).timeout
 	get_node("/root/Main").change_scene("res://scenes/result.tscn")
 
 
 func _update_ui() -> void:
-	month_label.text = "%dヶ月目" % (GameState.month + 1)
+	# フェーズ表示
+	month_label.text = "%s %dヶ月目" % [phase_manager.get_phase_name(), GameState.month + 1]
 
 	# 資金 - 色を残高で変える
 	var cash_color: Color
@@ -190,18 +886,97 @@ func _update_ui() -> void:
 	# オフィスビジュアル更新
 	office_view.refresh()
 
-	# 資金調達ボタンのクールダウン表示
-	var fundraise_btn = buttons.get_node("FundraiseBtn")
-	if GameState.fundraise_cooldown > 0:
-		fundraise_btn.text = "💵 資金調達 (あと%dヶ月)" % GameState.fundraise_cooldown
-		fundraise_btn.disabled = true
-	else:
-		fundraise_btn.text = "💵 資金調達"
-		fundraise_btn.disabled = false
+	# チームボタンのメンバー数表示
+	team_btn.text = "👥 %d人" % GameState.team_size
+
+	# アクションメニューポップアップの状態更新
+	if action_menu_popup:
+		action_menu_popup.update_hire_btn()
+		action_menu_popup.update_fundraise_btn(GameState.fundraise_cooldown)
+		action_menu_popup.update_contract_state(GameState)
+
+		# チュートリアル中のアクション制限
+		if GameState.tutorial_month >= 0 and GameState.tutorial_month <= 5:
+			var trigger = "month_%d" % GameState.tutorial_month if GameState.tutorial_month > 0 else "game_start"
+			var forced = secretary_popup.get_tutorial_forced_action(trigger)
+			if forced != null and forced != "":
+				action_menu_popup.update_tutorial_state(forced)
+			elif forced == "":
+				# 全解放（チュートリアル完了）
+				GameState.tutorial_month = -1
+				secretary_popup._tutorial_completed = true
 
 
 func _add_log(text: String) -> void:
 	log_text += text + "\n"
 	log_label.text = log_text
+	# BBCodeタグを除去して履歴用に保存
+	var plain = text
+	var regex = RegEx.new()
+	regex.compile("\\[/?[a-zA-Z_=# 0-9]*\\]")
+	plain = regex.sub(plain, "", true)
+	_current_month_events.append(plain)
 	await get_tree().process_frame
 	log_label.scroll_to_line(log_label.get_line_count())
+
+
+func _trigger_quarterly_event() -> void:
+	var quarter = GameState.month / 3
+	var rev = GameState.revenue
+	var u = GameState.users
+	var team = GameState.team_size
+
+	# 評価判定
+	var rating := "普通"
+	var morale_effect := 0
+	var cash_bonus := 0
+	var reputation_effect := 0
+
+	if rev >= 200 and u >= 1000:
+		rating = "好調"
+		morale_effect = 10
+		cash_bonus = 100
+		reputation_effect = 5
+	elif rev >= 50 or u >= 500:
+		rating = "まずまず"
+		morale_effect = 3
+		reputation_effect = 2
+	elif rev <= 0 and GameState.month >= 6:
+		rating = "低迷"
+		morale_effect = -10
+		reputation_effect = -5
+
+	var description := "第%d四半期の業績レビュー\n\n" % quarter
+	description += "📊 MRR: %d万円\n" % rev
+	description += "📱 ユーザー: %s人\n" % _format_number_local(u)
+	description += "👥 チーム: %d人\n\n" % team
+	description += "総合評価: 【%s】" % rating
+
+	var effect_text := ""
+	if morale_effect != 0:
+		GameState.team_morale = clampi(GameState.team_morale + morale_effect, 0, 100)
+		effect_text += "士気 %+d " % morale_effect
+	if cash_bonus > 0:
+		GameState.cash += cash_bonus
+		effect_text += "ボーナス +%d万 " % cash_bonus
+	if reputation_effect != 0:
+		GameState.reputation = clampi(GameState.reputation + reputation_effect, 0, 100)
+		effect_text += "評判 %+d" % reputation_effect
+
+	var event_data := {
+		"title": "📅 第%d四半期 取締役会" % quarter,
+		"description": description,
+		"choices": [],
+	}
+	event_popup.show_event(event_data)
+	if effect_text != "":
+		event_popup._effect_label.text = effect_text
+	_add_log("[color=#8899CC]📅 Q%d取締役会: %s[/color]" % [quarter, rating])
+
+
+func _format_number_local(n: int) -> String:
+	if n >= 100000000:
+		return "%.1f億" % (n / 100000000.0)
+	elif n >= 10000:
+		return "%d万" % (n / 10000) if n >= 100000 else str(n)
+	return str(n)

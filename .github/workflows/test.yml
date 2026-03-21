@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  GODOT_VERSION: "4.3"
+
+jobs:
+  test:
+    name: GdUnit4 Tests
+    runs-on: ubuntu-latest
+    container:
+      image: barichello/godot-ci:4.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot imports
+        uses: actions/cache@v4
+        with:
+          path: .godot/imported/
+          key: godot-imports-${{ runner.os }}-${{ hashFiles('**/*.import') }}
+          restore-keys: |
+            godot-imports-${{ runner.os }}-
+
+      - name: Install GdUnit4 addon
+        run: |
+          mkdir -p addons
+          cd addons
+          git clone --depth 1 https://github.com/MikeSchulze/gdUnit4.git gdUnit4
+          cd ..
+
+      - name: Import project
+        run: godot --headless --import 2>&1 || true
+        timeout-minutes: 5
+
+      - name: Run GdUnit4 tests
+        run: |
+          godot --headless -s addons/gdUnit4/bin/GdUnitCmdTool.gd --path . --add .
+        timeout-minutes: 10

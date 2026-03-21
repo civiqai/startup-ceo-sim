@@ -65,7 +65,7 @@ func _rebuild_cards() -> void:
 	for child in _cards_container.get_children():
 		child.queue_free()
 
-	var types := FundraiseTypes.get_all_types()
+	var types = FundraiseTypes.get_all_types()
 	for type_data in types:
 		var card := _build_card(type_data)
 		_cards_container.add_child(card)
@@ -208,7 +208,7 @@ func _on_cancel_pressed() -> void:
 func _build_ui() -> void:
 	_panel_root = Control.new()
 	_panel_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_panel_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel_root)
 
 	# 暗いオーバーレイ
@@ -228,26 +228,10 @@ func _build_ui() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel_root.add_child(center)
 
-	# メインパネル
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = COLOR_PANEL_BG
-	panel_style.border_width_left = 2
-	panel_style.border_width_top = 2
-	panel_style.border_width_right = 2
-	panel_style.border_width_bottom = 2
-	panel_style.border_color = COLOR_PANEL_BORDER
-	panel_style.corner_radius_top_left = 12
-	panel_style.corner_radius_top_right = 12
-	panel_style.corner_radius_bottom_left = 12
-	panel_style.corner_radius_bottom_right = 12
-	panel_style.content_margin_left = 24
-	panel_style.content_margin_top = 20
-	panel_style.content_margin_right = 24
-	panel_style.content_margin_bottom = 20
-
+	# メインパネル（Kenney UIテクスチャ使用）
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(640, 0)
-	panel.add_theme_stylebox_override("panel", panel_style)
+	KenneyTheme.apply_panel_style(panel, "popup")
 	center.add_child(panel)
 
 	# メインVBox
@@ -288,31 +272,12 @@ func _build_ui() -> void:
 	_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(_cards_container)
 
-	# キャンセルボタン
-	var cancel_style := StyleBoxFlat.new()
-	cancel_style.bg_color = Color(0.20, 0.22, 0.28)
-	cancel_style.corner_radius_top_left = 10
-	cancel_style.corner_radius_top_right = 10
-	cancel_style.corner_radius_bottom_left = 10
-	cancel_style.corner_radius_bottom_right = 10
-	cancel_style.border_width_left = 1
-	cancel_style.border_width_top = 1
-	cancel_style.border_width_right = 1
-	cancel_style.border_width_bottom = 1
-	cancel_style.border_color = Color(0.35, 0.38, 0.45)
-	cancel_style.content_margin_top = 8
-	cancel_style.content_margin_bottom = 8
-
-	var cancel_hover_style := cancel_style.duplicate()
-	cancel_hover_style.bg_color = Color(0.25, 0.27, 0.34)
-
+	# キャンセルボタン（Kenney UIスタイル）
 	_cancel_button = Button.new()
 	_cancel_button.text = "戻る"
 	_cancel_button.custom_minimum_size = Vector2(0, 56)
 	_cancel_button.add_theme_font_size_override("font_size", 24)
-	_cancel_button.add_theme_color_override("font_color", Color(0.85, 0.87, 0.92))
-	_cancel_button.add_theme_stylebox_override("normal", cancel_style)
-	_cancel_button.add_theme_stylebox_override("hover", cancel_hover_style)
-	_cancel_button.add_theme_stylebox_override("pressed", cancel_hover_style)
+	_cancel_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	vbox.add_child(_cancel_button)

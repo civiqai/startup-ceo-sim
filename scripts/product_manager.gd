@@ -1,0 +1,413 @@
+extends Node
+## プロダクト開発管理 — 複数プロダクト・タイプ選択・機能開発・技術的負債・撤退
+
+signal feature_completed(feature: Dictionary)
+signal tech_debt_warning(debt_level: int)
+signal product_created(product: Dictionary)
+signal product_shutdown(product: Dictionary)
+
+# プロダクトタイプ
+const PRODUCT_TYPES := {
+	"saas": {
+		"name": "SaaS", "icon": "☁️",
+		"description": "BtoB向けクラウドサービス",
+		"base_mrr_multiplier": 1.5,
+		"user_growth_rate": 0.8,
+		"init_cost": 200,  # 初期費用200万
+		"monthly_maintenance": 30,  # 月額メンテ30万
+		"features": ["auth", "dashboard", "analytics", "api", "billing", "notification", "admin", "export"],
+	},
+	"game": {
+		"name": "ゲーム", "icon": "🎮",
+		"description": "モバイルゲーム",
+		"base_mrr_multiplier": 2.0,
+		"user_growth_rate": 1.5,
+		"init_cost": 1000,  # 初期費用1000万
+		"monthly_maintenance": 80,  # 月額メンテ80万
+		"features": ["auth", "gacha", "pvp", "guild", "ranking", "event_system", "tutorial", "shop"],
+	},
+	"iot": {
+		"name": "IoT", "icon": "📡",
+		"description": "IoTプラットフォーム",
+		"base_mrr_multiplier": 1.8,
+		"user_growth_rate": 0.5,
+		"init_cost": 1500,  # 初期費用1500万
+		"monthly_maintenance": 100,  # 月額メンテ100万
+		"features": ["auth", "dashboard", "api", "notification", "admin", "export", "analytics", "billing"],
+	},
+}
+
+# 機能の定義（共通）
+const FEATURES := {
+	"auth": {"name": "認証・ログイン", "cost": 0, "power": 5, "months": 1, "icon": "🔐"},
+	"dashboard": {"name": "ダッシュボード", "cost": 100, "power": 8, "months": 2, "icon": "📊"},
+	"analytics": {"name": "分析機能", "cost": 150, "power": 10, "months": 2, "icon": "📈"},
+	"api": {"name": "API公開", "cost": 200, "power": 12, "months": 3, "icon": "🔌"},
+	"billing": {"name": "課金システム", "cost": 250, "power": 15, "months": 3, "icon": "💳"},
+	"notification": {"name": "通知機能", "cost": 80, "power": 6, "months": 1, "icon": "🔔"},
+	"admin": {"name": "管理画面", "cost": 120, "power": 7, "months": 2, "icon": "⚙️"},
+	"export": {"name": "データ出力", "cost": 100, "power": 5, "months": 1, "icon": "📤"},
+	"gacha": {"name": "ガチャ", "cost": 200, "power": 15, "months": 2, "icon": "🎰"},
+	"pvp": {"name": "対戦機能", "cost": 300, "power": 18, "months": 3, "icon": "⚔️"},
+	"guild": {"name": "ギルド", "cost": 200, "power": 12, "months": 2, "icon": "🏰"},
+	"ranking": {"name": "ランキング", "cost": 100, "power": 8, "months": 1, "icon": "🏆"},
+	"event_system": {"name": "イベント機能", "cost": 150, "power": 10, "months": 2, "icon": "🎪"},
+	"tutorial": {"name": "チュートリアル", "cost": 80, "power": 5, "months": 1, "icon": "📖"},
+	"shop": {"name": "ショップ", "cost": 150, "power": 10, "months": 2, "icon": "🏪"},
+}
+
+# 複数プロダクト管理
+var products: Array[Dictionary] = []
+
+# 現在選択中のプロダクトインデックス（開発・マーケティング対象）
+var active_product_index: int = -1
+
+# 後方互換: selected_product_type は最初のアクティブプロダクトのタイプを返す
+var selected_product_type: String:
+	get:
+		for p in products:
+			if p.get("active", true):
+				return p["type"]
+		return ""
+
+# 後方互換: developed_features は選択中プロダクトの機能リスト
+var developed_features: Array[String]:
+	get:
+		var p = _get_active_product()
+		if p.is_empty():
+			return [] as Array[String]
+		var result: Array[String] = []
+		for f in p.get("developed_features", []):
+			result.append(f)
+		return result
+
+# 後方互換: developing_feature は選択中プロダクトの開発中機能
+var developing_feature: String:
+	get:
+		var p = _get_active_product()
+		if p.is_empty():
+			return ""
+		return p.get("developing_feature", "")
+
+# 後方互換: dev_remaining_months
+var dev_remaining_months: int:
+	get:
+		var p = _get_active_product()
+		if p.is_empty():
+			return 0
+		return p.get("dev_remaining_months", 0)
+
+# 後方互換: tech_debt（全アクティブプロダクトの最大値）
+var tech_debt: int:
+	get:
+		var max_debt := 0
+		for p in products:
+			if p.get("active", true):
+				max_debt = maxi(max_debt, p.get("tech_debt", 0))
+		return max_debt
+	set(value):
+		# 選択中プロダクトの tech_debt を設定（イベント等での直接書き込み対応）
+		var p = _get_active_product()
+		if not p.is_empty():
+			p["tech_debt"] = value
+
+
+## 現在選択中のアクティブプロダクトを取得
+func _get_active_product() -> Dictionary:
+	if active_product_index >= 0 and active_product_index < products.size():
+		var p = products[active_product_index]
+		if p.get("active", true):
+			return p
+	# フォールバック: 最初のアクティブプロダクト
+	for i in products.size():
+		if products[i].get("active", true):
+			active_product_index = i
+			return products[i]
+	return {}
+
+
+## アクティブプロダクト一覧を取得
+func get_active_products() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for p in products:
+		if p.get("active", true):
+			result.append(p)
+	return result
+
+
+## プロダクトを新規作成
+func create_product(type_id: String) -> String:
+	if not PRODUCT_TYPES.has(type_id):
+		return "不明なプロダクトタイプ"
+	if not TeamManager.has_cxo("pm") and TeamManager.get_members_by_skill("pm").is_empty():
+		return "PM(プロダクトマネージャー)が必要です"
+	var type_data = PRODUCT_TYPES[type_id]
+	var init_cost = type_data.get("init_cost", 0)
+	if GameState.cash < init_cost:
+		return "初期費用%d万円が不足しています" % init_cost
+	# SaaS以外は資金制約チェック
+	if type_id != "saas" and GameState.cash < init_cost + 500:
+		return "資金に余裕がありません（推奨: %d万円以上）" % (init_cost + 500)
+	GameState.cash -= init_cost
+	var product := {
+		"type": type_id,
+		"name": type_data["name"],
+		"ux": 5,
+		"design": 5,
+		"margin": 0,
+		"awareness": 0,
+		"developed_features": ["auth"],
+		"developing_feature": "",
+		"dev_remaining_months": 0,
+		"tech_debt": 0,
+		"users": 0,
+		"revenue": 0,
+		"active": true,
+	}
+	products.append(product)
+	active_product_index = products.size() - 1
+	product_created.emit(product)
+	return "%s %sを立ち上げました！（初期費用: %d万円）" % [type_data["icon"], type_data["name"], init_cost]
+
+
+## サービス撤退（シャットダウン）
+func shutdown_product(index: int) -> String:
+	if index < 0 or index >= products.size():
+		return "無効なプロダクト"
+	var p = products[index]
+	if not p.get("active", true):
+		return "既にサービス終了しています"
+	p["active"] = false
+	p["developing_feature"] = ""
+	p["dev_remaining_months"] = 0
+	product_shutdown.emit(p)
+	# active_product_indexがシャットダウンしたものなら再選択
+	if active_product_index == index:
+		active_product_index = -1
+		_get_active_product()  # フォールバックで再選択
+	return "%sをサービス終了しました。メンテコストが削減されます。" % p["name"]
+
+
+## 月額メンテコスト合計を取得
+func get_total_maintenance_cost() -> int:
+	var total := 0
+	for p in products:
+		if p.get("active", true):
+			var type_data = PRODUCT_TYPES.get(p["type"], {})
+			total += type_data.get("monthly_maintenance", 0)
+	return total
+
+
+## プロダクトタイプを選択（後方互換 + 自動プロダクト作成）
+func select_product_type(type_id: String) -> void:
+	if PRODUCT_TYPES.has(type_id):
+		# 既存プロダクトがない場合は新規作成（旧API互換）
+		if products.is_empty():
+			var product := {
+				"type": type_id,
+				"name": PRODUCT_TYPES[type_id]["name"],
+				"ux": 5,
+				"design": 5,
+				"margin": 0,
+				"awareness": 0,
+				"developed_features": ["auth"],
+				"developing_feature": "",
+				"dev_remaining_months": 0,
+				"tech_debt": 0,
+				"users": 0,
+				"revenue": 0,
+				"active": true,
+			}
+			products.append(product)
+			active_product_index = 0
+
+
+## アクティブプロダクトを選択（インデックス指定）
+func select_active_product(index: int) -> void:
+	if index >= 0 and index < products.size() and products[index].get("active", true):
+		active_product_index = index
+
+
+## 開発可能な機能一覧を取得（選択中プロダクト）
+func get_available_features() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var p = _get_active_product()
+	if p.is_empty():
+		return result
+	var type_data = PRODUCT_TYPES.get(p["type"], {})
+	var feats = p.get("developed_features", [])
+	var dev_feat = p.get("developing_feature", "")
+	for feat_id in type_data.get("features", []):
+		if feat_id in feats or feat_id == dev_feat:
+			continue
+		if FEATURES.has(feat_id):
+			var feat = FEATURES[feat_id].duplicate()
+			feat["id"] = feat_id
+			result.append(feat)
+	return result
+
+
+## 機能開発を開始（選択中プロダクト）
+func start_feature_dev(feature_id: String) -> bool:
+	var p = _get_active_product()
+	if p.is_empty():
+		return false
+	if not FEATURES.has(feature_id):
+		return false
+	if feature_id in p.get("developed_features", []):
+		return false
+	var feat = FEATURES[feature_id]
+	if GameState.cash < feat["cost"]:
+		return false
+	GameState.cash -= feat["cost"]
+	p["developing_feature"] = feature_id
+	p["dev_remaining_months"] = feat["months"]
+	return true
+
+
+## 毎月の開発進捗処理（全アクティブプロダクト）
+func advance_month() -> String:
+	var results: Array[String] = []
+	for i in products.size():
+		var p = products[i]
+		if not p.get("active", true):
+			continue
+		var dev_feat = p.get("developing_feature", "")
+		if dev_feat == "":
+			continue
+		p["dev_remaining_months"] = p.get("dev_remaining_months", 0) - 1
+
+		# CTOがいれば開発速度UP
+		if TeamManager.has_cxo("engineer") and p["dev_remaining_months"] > 0:
+			if randf() < 0.3:
+				p["dev_remaining_months"] -= 1
+
+		if p["dev_remaining_months"] <= 0:
+			var feats: Array = p.get("developed_features", [])
+			feats.append(dev_feat)
+			p["developed_features"] = feats
+			var feat = FEATURES.get(dev_feat, {})
+			# プロダクト力向上
+			var power_gain = feat.get("power", 5)
+			GameState.add_product_power(power_gain)
+			# 技術的負債の増加
+			p["tech_debt"] = mini(p.get("tech_debt", 0) + randi_range(3, 8), 100)
+			var product_label = ""
+			if products.size() > 1:
+				product_label = "[%s] " % p.get("name", "")
+			var result_text = "%s%s %sが完成！プロダクト力 +%d" % [
+				product_label, feat.get("icon", ""), feat.get("name", ""), power_gain]
+			var completed_feat = feat.duplicate()
+			completed_feat["id"] = dev_feat
+			feature_completed.emit(completed_feat)
+			p["developing_feature"] = ""
+			p["dev_remaining_months"] = 0
+			if p.get("tech_debt", 0) >= 60:
+				tech_debt_warning.emit(p.get("tech_debt", 0))
+			results.append(result_text)
+	return "\n".join(results)
+
+
+## 技術的負債の返済（選択中プロダクト、1ターン消費）
+func pay_tech_debt() -> String:
+	var p = _get_active_product()
+	if p.is_empty():
+		return "対象プロダクトがありません"
+	var reduction = randi_range(15, 30)
+	# CTOボーナス
+	if TeamManager.has_cxo("engineer"):
+		reduction += 10
+	p["tech_debt"] = maxi(p.get("tech_debt", 0) - reduction, 0)
+	return "技術的負債を返済。負債 -%d（残り: %d）" % [reduction, p.get("tech_debt", 0)]
+
+
+## 技術的負債によるバグ確率
+func get_bug_probability() -> float:
+	return tech_debt / 200.0  # 最大50%
+
+
+## 開発済み機能数に応じたプロダクト力ボーナス
+func get_feature_bonus() -> int:
+	var total := 0
+	for p in products:
+		if p.get("active", true):
+			total += p.get("developed_features", []).size()
+	return total * 2
+
+
+## MRR倍率を取得（全アクティブプロダクトの加重平均）
+func get_mrr_multiplier() -> float:
+	var active = get_active_products()
+	if active.is_empty():
+		return 1.0
+	var total := 0.0
+	for p in active:
+		var type_data = PRODUCT_TYPES.get(p["type"], {})
+		total += type_data.get("base_mrr_multiplier", 1.0)
+	return total / active.size()
+
+
+## リセット
+func reset() -> void:
+	products.clear()
+	active_product_index = -1
+
+
+## セーブ用
+func to_dict() -> Dictionary:
+	return {
+		"products": products.duplicate(true),
+		"active_product_index": active_product_index,
+		# 後方互換
+		"selected_product_type": selected_product_type,
+	}
+
+
+## ロード用
+func from_dict(data: Dictionary) -> void:
+	# 新フォーマット
+	if data.has("products"):
+		products.clear()
+		for p in data["products"]:
+			# 旧プロダクトデータにux/design等がない場合のデフォルト値を補完
+			if not p.has("ux"):
+				p["ux"] = 5
+			if not p.has("design"):
+				p["design"] = 5
+			if not p.has("margin"):
+				p["margin"] = 0
+			if not p.has("awareness"):
+				p["awareness"] = 0
+			if not p.has("revenue"):
+				p["revenue"] = 0
+			products.append(p)
+		active_product_index = data.get("active_product_index", -1)
+		if active_product_index < 0:
+			_get_active_product()
+	else:
+		# 旧フォーマットからの移行
+		products.clear()
+		var old_type = data.get("selected_product_type", "")
+		if old_type != "":
+			var feats: Array = []
+			for f in data.get("developed_features", []):
+				feats.append(f)
+			var product := {
+				"type": old_type,
+				"name": PRODUCT_TYPES.get(old_type, {}).get("name", old_type),
+				"ux": 5,
+				"design": 5,
+				"margin": 0,
+				"awareness": 0,
+				"developed_features": feats,
+				"developing_feature": data.get("developing_feature", ""),
+				"dev_remaining_months": data.get("dev_remaining_months", 0),
+				"tech_debt": data.get("tech_debt", 0),
+				"users": 0,
+				"revenue": 0,
+				"active": true,
+			}
+			products.append(product)
+			active_product_index = 0
+		else:
+			active_product_index = -1

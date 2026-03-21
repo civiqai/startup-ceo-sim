@@ -1,7 +1,12 @@
 # Godot 4 specific
 .godot/
 *.import
+*.translation
 export_presets.cfg
+
+# Build outputs
+build/
+export/
 
 # OS
 .DS_Store
@@ -9,5 +14,10 @@ Thumbs.db
 
 # IDE
 .vscode/
+.idea/
 *.swp
 *.swo
+
+# Android signing
+*.keystore
+*.jks

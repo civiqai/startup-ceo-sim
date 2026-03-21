@@ -167,8 +167,13 @@ func _update_valuation_breakdown() -> void:
 
 func _on_apply_params() -> void:
 	GameState.cash = int(cash_spin.value)
-	GameState.product_power = int(product_spin.value)
-	GameState.team_size = int(team_spin.value)
+	GameState.add_product_power(int(product_spin.value) - GameState.product_power)
+	# チーム人数の調整（TeamManager経由）
+	var target_team := int(team_spin.value) - 1  # 社長分を引く
+	while TeamManager.members.size() < target_team:
+		GameState.add_random_member()
+	while TeamManager.members.size() > target_team and TeamManager.members.size() > 0:
+		GameState.remove_random_member()
 	GameState.team_morale = int(morale_spin.value)
 	GameState.users = int(users_spin.value)
 	GameState.reputation = int(reputation_spin.value)
@@ -245,7 +250,7 @@ func _on_trigger_event() -> void:
 
 func _on_instant_win() -> void:
 	GameState.users = 20000
-	GameState.product_power = 100
+	GameState.add_product_power(100 - GameState.product_power)
 	GameState.reputation = 100
 	GameState.state_changed.emit()
 	GameState.game_clear.emit("【デバッグ】即座にIPO達成！")

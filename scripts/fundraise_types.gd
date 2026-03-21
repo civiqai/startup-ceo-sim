@@ -211,23 +211,31 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 					var amount = mini(3000, cap)
 					gs.cash += amount
 					gs.reputation = mini(gs.reputation + 10, 100)
-					return "資金 +%d万円、評判 +10" % amount
+					var dilution = amount * 0.003
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 +10（持株 %.1f%%）" % [amount, gs.equity_share]
 				1: # 少額エンジェル
 					var amount = mini(500, cap)
 					gs.cash += amount
 					gs.reputation = mini(gs.reputation + 5, 100)
-					return "資金 +%d万円、評判 +5" % amount
+					var dilution = amount * 0.003
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 +5（持株 %.1f%%）" % [amount, gs.equity_share]
 				2: # 条件付き出資
 					var amount = mini(1200, cap)
 					gs.cash += amount
 					gs.reputation = maxi(gs.reputation - 10, 0)
-					return "資金 +%d万円、評判 -10" % amount
+					var dilution = amount * 0.003
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 -10（持株 %.1f%%）" % [amount, gs.equity_share]
 				3: # 起業家の紹介
 					var amount = mini(800, cap)
 					gs.cash += amount
-					gs.product_power = mini(gs.product_power + 5, 100)
+					gs.add_product_power(5)
 					gs.reputation = mini(gs.reputation + 5, 100)
-					return "資金 +%d万円、プロダクト力 +5、評判 +5" % amount
+					var dilution = amount * 0.003
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、プロダクト力 +5、評判 +5（持株 %.1f%%）" % [amount, gs.equity_share]
 				4: # 門前払い
 					gs.team_morale = maxi(gs.team_morale - 5, 0)
 					return "何も得られなかった… 士気 -5"
@@ -243,9 +251,11 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 				7: # アクセラレーター
 					var amount = mini(800, cap)
 					gs.cash += amount
-					gs.product_power = mini(gs.product_power + 8, 100)
+					gs.add_product_power(8)
 					gs.brand_value = mini(gs.brand_value + 5, 100)
-					return "資金 +%d万円、プロダクト力 +8、ブランド +5" % amount
+					var dilution = amount * 0.003
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、プロダクト力 +8、ブランド +5（持株 %.1f%%）" % [amount, gs.equity_share]
 
 		"vc":
 			match idx:
@@ -254,21 +264,29 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 					gs.cash += amount
 					gs.reputation = mini(gs.reputation + 15, 100)
 					gs.brand_value = mini(gs.brand_value + 10, 100)
-					return "資金 +%d万円、評判 +15、ブランド +10" % amount
+					var dilution = amount * 0.004
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 +15、ブランド +10（持株 %.1f%%）" % [amount, gs.equity_share]
 				1: # 標準出資
 					var amount = mini(2000, cap)
 					gs.cash += amount
-					return "資金 +%d万円" % amount
+					var dilution = amount * 0.004
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円（持株 %.1f%%）" % [amount, gs.equity_share]
 				2: # 小規模出資
 					var amount = mini(1000, cap)
 					gs.cash += amount
 					gs.reputation = mini(gs.reputation + 5, 100)
-					return "資金 +%d万円、評判 +5" % amount
+					var dilution = amount * 0.004
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 +5（持株 %.1f%%）" % [amount, gs.equity_share]
 				3: # 好条件出資
 					var amount = mini(3000, cap)
 					gs.cash += amount
 					gs.reputation = mini(gs.reputation + 10, 100)
-					return "資金 +%d万円、評判 +10" % amount
+					var dilution = amount * 0.004
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 +10（持株 %.1f%%）" % [amount, gs.equity_share]
 				4: # 却下
 					gs.reputation = maxi(gs.reputation - 10, 0)
 					gs.team_morale = maxi(gs.team_morale - 10, 0)
@@ -277,18 +295,24 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 					var amount = mini(2500, cap)
 					gs.cash += amount
 					gs.reputation = maxi(gs.reputation - 15, 0)
-					return "資金 +%d万円、評判 -15（持株比率大）" % amount
+					var dilution = amount * 0.005
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 -15（持株 %.1f%%）" % [amount, gs.equity_share]
 				6: # 大型ラウンド
 					var amount = mini(4000, cap)
 					gs.cash += amount
 					gs.brand_value = mini(gs.brand_value + 5, 100)
-					return "資金 +%d万円、ブランド +5" % amount
+					var dilution = amount * 0.004
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、ブランド +5（持株 %.1f%%）" % [amount, gs.equity_share]
 				7: # リードインベスター
 					var amount = mini(3500, cap)
 					gs.cash += amount
 					gs.reputation = mini(gs.reputation + 20, 100)
-					gs.product_power = mini(gs.product_power + 3, 100)
-					return "資金 +%d万円、評判 +20、プロダクト力 +3" % amount
+					gs.add_product_power(3)
+					var dilution = amount * 0.004
+					gs.equity_share = maxf(gs.equity_share - dilution, 0.0)
+					return "資金 +%d万円、評判 +20、プロダクト力 +3（持株 %.1f%%）" % [amount, gs.equity_share]
 
 		"bank":
 			match idx:
@@ -315,7 +339,7 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 				5: # 担保要求
 					var amount = mini(1200, cap)
 					gs.cash += amount
-					gs.product_power = maxi(gs.product_power - 3, 0)
+					gs.add_product_power(-3)
 					return "資金 +%d万円、プロダクト力 -3" % amount
 				6: # 大口融資
 					var amount = mini(1800, cap)
