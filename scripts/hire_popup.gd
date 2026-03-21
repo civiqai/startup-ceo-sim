@@ -2,12 +2,17 @@ extends CanvasLayer
 ## 採用ポップアップ — 採用チャネル選択 + 候補者3人から選択
 
 signal hire_completed(member_data: Dictionary, channel: String, total_cost: int)
+signal hire_with_fire_completed(member_data: Dictionary, fire_member_index: int, channel: String, total_cost: int)
 signal hire_cancelled()
 
 var _is_open := false
 var _current_channel := "referral"  # referral, agent, scout
 var _candidates: Array = []  # 現在表示中の候補者データ
 var _avatar_textures: Dictionary = {}  # index -> TextureRect (アバター画像差し替え用)
+var _pending_candidate: Dictionary = {}  # 解雇選択待ちの候補者
+var _pending_channel: String = ""
+var _pending_cost: int = 0
+var _fire_overlay: Control = null  # 解雇選択オーバーレイ
 
 # UI refs
 var _panel_root: Control
@@ -457,6 +462,14 @@ func _on_hire_pressed(index: int) -> void:
 	var fee_rate: float = channel_data["fee_rate"]
 	var hire_fee: int = int(candidate["salary"] * fee_rate)
 
+	# チームが上限に達している場合、解雇選択画面を表示
+	if TeamManager.is_full():
+		_pending_candidate = candidate
+		_pending_channel = _current_channel
+		_pending_cost = hire_fee
+		_show_fire_selection()
+		return
+
 	_panel_root.visible = false
 	_is_open = false
 	hire_completed.emit(candidate, _current_channel, hire_fee)
@@ -562,3 +575,229 @@ func _build_ui() -> void:
 	KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	vbox.add_child(_cancel_button)
+
+
+## --- 解雇選択画面 ---
+
+func _show_fire_selection() -> void:
+	if _fire_overlay != null:
+		_fire_overlay.queue_free()
+
+	_fire_overlay = Control.new()
+	_fire_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fire_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(_fire_overlay)
+
+	# 暗い背景
+	var bg := ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.color = Color(0, 0, 0, 0.85)
+	bg.mouse_filter = Control.MOUSE_FILTER_STOP
+	_fire_overlay.add_child(bg)
+
+	# 中央配置
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fire_overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(620, 0)
+	KenneyTheme.apply_panel_style(panel, "popup")
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	panel.add_child(vbox)
+
+	# タイトル
+	var title := Label.new()
+	title.text = "⚠️ チームが上限（%d人）です" % TeamManager.MAX_MEMBERS
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color(0.95, 0.65, 0.30))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	# 新規採用候補の情報
+	var new_name: String = _pending_candidate.get("name", "")
+	var new_skill: String = SKILL_NAMES.get(_pending_candidate.get("skill_type", ""), "")
+	var new_level: int = _pending_candidate.get("skill_level", 1)
+	var new_emoji: String = SKILL_EMOJI.get(_pending_candidate.get("skill_type", ""), "")
+	var info_label := Label.new()
+	info_label.text = "採用予定: %s %s（%s Lv.%s）" % [new_emoji, new_name, new_skill, "★".repeat(new_level)]
+	info_label.add_theme_font_size_override("font_size", 20)
+	info_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(info_label)
+
+	var desc := Label.new()
+	desc.text = "入れ替えるメンバーを選んでください"
+	desc.add_theme_font_size_override("font_size", 20)
+	desc.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(desc)
+
+	var sep := HSeparator.new()
+	sep.add_theme_color_override("separator_color", Color(0.30, 0.32, 0.40))
+	vbox.add_child(sep)
+
+	# メンバーリスト（スクロール）
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 400)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	vbox.add_child(scroll)
+
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation", 8)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+
+	for i in TeamManager.members.size():
+		var m = TeamManager.members[i]
+		var card := _build_fire_member_card(m, i)
+		list.add_child(card)
+
+	# 戻るボタン
+	var back_btn := Button.new()
+	back_btn.text = "戻る"
+	back_btn.custom_minimum_size = Vector2(0, 52)
+	back_btn.add_theme_font_size_override("font_size", 22)
+	back_btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	KenneyTheme.apply_button_style(back_btn, "grey")
+	back_btn.pressed.connect(_on_fire_back_pressed)
+	vbox.add_child(back_btn)
+
+
+func _build_fire_member_card(member, index: int) -> PanelContainer:
+	var skill_type: String = member.skill_type
+	var skill_name: String = SKILL_NAMES.get(skill_type, skill_type)
+	var emoji: String = SKILL_EMOJI.get(skill_type, "❓")
+	var personality_name: String = PERSONALITY_NAMES.get(member.personality, member.personality)
+	var stars := "★".repeat(member.skill_level)
+
+	var card_style := StyleBoxFlat.new()
+	card_style.bg_color = Color(0.12, 0.14, 0.20)
+	card_style.corner_radius_top_left = 10
+	card_style.corner_radius_top_right = 10
+	card_style.corner_radius_bottom_left = 10
+	card_style.corner_radius_bottom_right = 10
+	card_style.border_width_left = 3
+	card_style.border_color = Color(0.85, 0.35, 0.35)
+	card_style.content_margin_left = 14
+	card_style.content_margin_top = 10
+	card_style.content_margin_right = 14
+	card_style.content_margin_bottom = 10
+
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", card_style)
+
+	var outer_vbox := VBoxContainer.new()
+	outer_vbox.add_theme_constant_override("separation", 6)
+	card.add_child(outer_vbox)
+
+	# メンバー情報
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 10)
+	outer_vbox.add_child(hbox)
+
+	# アバター
+	var avatar_container := PanelContainer.new()
+	var avatar_style := StyleBoxFlat.new()
+	avatar_style.bg_color = SKILL_COLORS.get(skill_type, Color(0.3, 0.3, 0.3))
+	avatar_style.corner_radius_top_left = 22
+	avatar_style.corner_radius_top_right = 22
+	avatar_style.corner_radius_bottom_left = 22
+	avatar_style.corner_radius_bottom_right = 22
+	avatar_container.add_theme_stylebox_override("panel", avatar_style)
+	avatar_container.custom_minimum_size = Vector2(44, 44)
+	avatar_container.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	avatar_container.clip_contents = true
+	hbox.add_child(avatar_container)
+
+	var avatar_sizer := Control.new()
+	avatar_sizer.custom_minimum_size = Vector2(44, 44)
+	avatar_container.add_child(avatar_sizer)
+
+	var initial_label := Label.new()
+	initial_label.text = member.member_name.left(1)
+	initial_label.add_theme_font_size_override("font_size", 22)
+	initial_label.add_theme_color_override("font_color", Color(1, 1, 1))
+	initial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	initial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	initial_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	avatar_sizer.add_child(initial_label)
+
+	if member.avatar_id > 0:
+		var avatar_tex := TextureRect.new()
+		avatar_tex.set_anchors_preset(Control.PRESET_FULL_RECT)
+		avatar_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		avatar_tex.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		avatar_tex.visible = false
+		avatar_sizer.add_child(avatar_tex)
+		AvatarLoader.get_avatar(member.avatar_id, func(tex: Variant) -> void:
+			if is_instance_valid(avatar_tex) and tex != null:
+				avatar_tex.texture = tex
+				avatar_tex.visible = true
+				initial_label.visible = false
+		)
+
+	# テキスト情報
+	var info_vbox := VBoxContainer.new()
+	info_vbox.add_theme_constant_override("separation", 2)
+	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(info_vbox)
+
+	var name_label := Label.new()
+	name_label.text = "%s %s  Lv.%s" % [emoji, member.member_name, stars]
+	name_label.add_theme_font_size_override("font_size", 22)
+	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	info_vbox.add_child(name_label)
+
+	var detail_label := Label.new()
+	detail_label.text = "%s / %s / 年収%d万円" % [skill_name, personality_name, member.salary]
+	detail_label.add_theme_font_size_override("font_size", 18)
+	detail_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
+	info_vbox.add_child(detail_label)
+
+	# 解雇して採用ボタン
+	var fire_btn_style := StyleBoxFlat.new()
+	fire_btn_style.bg_color = Color(0.55, 0.20, 0.20)
+	fire_btn_style.corner_radius_top_left = 8
+	fire_btn_style.corner_radius_top_right = 8
+	fire_btn_style.corner_radius_bottom_left = 8
+	fire_btn_style.corner_radius_bottom_right = 8
+	fire_btn_style.content_margin_top = 4
+	fire_btn_style.content_margin_bottom = 4
+
+	var fire_btn_hover := fire_btn_style.duplicate()
+	fire_btn_hover.bg_color = Color(0.65, 0.25, 0.25)
+
+	var fire_btn := Button.new()
+	fire_btn.text = "🔄 解雇して入れ替え"
+	fire_btn.custom_minimum_size = Vector2(0, 42)
+	fire_btn.add_theme_font_size_override("font_size", 20)
+	fire_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	fire_btn.add_theme_stylebox_override("normal", fire_btn_style)
+	fire_btn.add_theme_stylebox_override("hover", fire_btn_hover)
+	fire_btn.add_theme_stylebox_override("pressed", fire_btn_hover)
+	fire_btn.pressed.connect(_on_fire_and_hire_pressed.bind(index))
+	outer_vbox.add_child(fire_btn)
+
+	return card
+
+
+func _on_fire_and_hire_pressed(member_index: int) -> void:
+	AudioManager.play_sfx("click")
+	if _fire_overlay:
+		_fire_overlay.queue_free()
+		_fire_overlay = null
+	_panel_root.visible = false
+	_is_open = false
+	hire_with_fire_completed.emit(_pending_candidate, member_index, _pending_channel, _pending_cost)
+
+
+func _on_fire_back_pressed() -> void:
+	AudioManager.play_sfx("click")
+	if _fire_overlay:
+		_fire_overlay.queue_free()
+		_fire_overlay = null

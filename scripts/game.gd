@@ -134,6 +134,7 @@ func _ready() -> void:
 	hire_popup.set_script(HirePopupScript)
 	add_child(hire_popup)
 	hire_popup.hire_completed.connect(_on_hire_completed)
+	hire_popup.hire_with_fire_completed.connect(_on_hire_with_fire_completed)
 	hire_popup.hire_cancelled.connect(_on_hire_cancelled)
 
 	# チーム一覧ポップアップ
@@ -458,6 +459,51 @@ func _on_hire_completed(member_data: Dictionary, channel: String, total_cost: in
 		member.member_name, skill_label, member.skill_level, personality_label, channel_name, total_cost
 	]
 	# 新メンバーからの挨拶をログメッセージに含める
+	var greeting: String = TeamMemberClass.get_greeting(member.member_name, member.skill_type, member.personality)
+	var full_msg := log_msg + "\n[color=#88BBDD]💬 %s「%s」[/color]" % [member.member_name, greeting]
+	AudioManager.play_sfx("success")
+	_update_ui()
+	turn_manager.execute_turn_with_result(full_msg)
+
+
+func _on_hire_with_fire_completed(member_data: Dictionary, fire_member_index: int, channel: String, total_cost: int) -> void:
+	if GameState.cash < total_cost:
+		_add_log("[color=#E85555]資金が足りず採用できなかった。（必要: %d万円）[/color]" % total_cost)
+		action_btn.disabled = false
+		return
+
+	# 解雇するメンバー
+	if fire_member_index < 0 or fire_member_index >= TeamManager.members.size():
+		action_btn.disabled = false
+		return
+	var fired = TeamManager.members[fire_member_index]
+	var fired_name: String = fired.member_name
+	var fired_skill: String = TeamMemberClass.get_skill_label(fired.skill_type)
+	TeamManager.fire(fired)
+
+	# 新メンバー作成・採用
+	var member := TeamMemberClass.new()
+	member.member_name = member_data.get("name", "名無し")
+	member.skill_type = member_data.get("skill_type", "engineer")
+	member.skill_level = member_data.get("skill_level", 1)
+	member.personality = member_data.get("personality", "diligent")
+	member.avatar_id = member_data.get("avatar_id", randi_range(1, 70))
+	member.role = "member"
+	member.months_employed = 0
+	member.calculate_salary()
+
+	GameState.cash -= total_cost
+	TeamManager.hire(member)
+	GameState.team_morale -= 5  # 入れ替えによる士気低下（通常より大きい）
+	GameState.team_morale = maxi(GameState.team_morale, 0)
+
+	var skill_label := TeamMemberClass.get_skill_label(member.skill_type)
+	var personality_label := TeamMemberClass.get_personality_label(member.personality)
+	var channel_names := {"agent": "エージェント", "referral": "リファラル", "scout": "スカウト"}
+	var channel_name: String = channel_names.get(channel, channel)
+	var log_msg := "[color=#E88855]%s（%s）を解雇[/color] → %s（%s Lv.%d / %s）を%s経由で採用！（採用費 %d万円）" % [
+		fired_name, fired_skill, member.member_name, skill_label, member.skill_level, personality_label, channel_name, total_cost
+	]
 	var greeting: String = TeamMemberClass.get_greeting(member.member_name, member.skill_type, member.personality)
 	var full_msg := log_msg + "\n[color=#88BBDD]💬 %s「%s」[/color]" % [member.member_name, greeting]
 	AudioManager.play_sfx("success")

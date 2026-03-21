@@ -24,6 +24,12 @@ const NAME_POOL: Array[String] = [
 const SKILL_TYPES: Array[String] = ["engineer", "designer", "marketer", "bizdev", "pm"]
 const PERSONALITIES: Array[String] = ["diligent", "creative", "mood_maker", "analytical", "leader"]
 const ROLES: Array[String] = ["member", "leader", "manager", "cxo"]
+const MAX_MEMBERS: int = 4  # 社長を除くメンバー上限
+
+
+## チームが上限に達しているか
+func is_full() -> bool:
+	return members.size() >= MAX_MEMBERS
 
 
 ## ランダムな候補者を生成する

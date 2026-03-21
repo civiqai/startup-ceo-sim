@@ -63,7 +63,12 @@ func update_fundraise_btn(cooldown: int) -> void:
 
 
 func update_hire_btn() -> void:
-	_hire_btn.text = "👤 採用する"
+	var current := TeamManager.members.size()
+	var max_m := TeamManager.MAX_MEMBERS
+	if current >= max_m:
+		_hire_btn.text = "👤 採用する（%d/%d 入替のみ）" % [current, max_m]
+	else:
+		_hire_btn.text = "👤 採用する（%d/%d）" % [current, max_m]
 
 
 func update_create_product_btn(active_count: int, has_pm: bool) -> void:
