@@ -147,13 +147,26 @@ func _build_card(channel_data: Dictionary) -> PanelContainer:
 		unlock_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		text_vbox.add_child(unlock_label)
 
-	# インタラクション設定
+	# インタラクション設定（スクロールとタップを区別）
 	if available:
-		card.mouse_filter = Control.MOUSE_FILTER_STOP
+		card.mouse_filter = Control.MOUSE_FILTER_PASS
 		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var press_pos := Vector2.ZERO
+		var is_pressed := false
 		card.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_on_card_pressed(channel_id)
+			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+				if event.pressed:
+					press_pos = event.position
+					is_pressed = true
+				elif is_pressed:
+					is_pressed = false
+					var drag_dist = press_pos.distance_to(event.position)
+					if drag_dist < 20.0:  # ドラッグ距離が短い場合のみタップ判定
+						_on_card_pressed(channel_id)
+			elif event is InputEventMouseMotion and is_pressed:
+				var drag_dist = press_pos.distance_to(event.position)
+				if drag_dist >= 20.0:
+					is_pressed = false  # スクロール操作と判断
 		)
 	else:
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
