@@ -946,8 +946,32 @@ func _on_create_product_cancelled() -> void:
 
 func _on_feature_completed(feature: Dictionary) -> void:
 	AudioManager.play_sfx("success")
-	_add_log("[color=#55CC70]✅ %s %sが完成！[/color]" % [
-		feature.get("icon", ""), feature.get("name", "")])
+	var feat_name: String = "%s %s" % [feature.get("icon", ""), feature.get("name", "")]
+	_add_log("[color=#55CC70]✅ %sが完成！[/color]" % feat_name)
+
+	# 効果詳細モーダルを表示
+	var effects: Dictionary = feature.get("applied_effects", {})
+	var stat_labels := {"ux": "UX品質", "design": "デザイン", "margin": "利益率", "awareness": "知名度"}
+	var stat_icons := {"ux": "⚡", "design": "🎨", "margin": "💰", "awareness": "📢"}
+	var effect_lines: Array[String] = []
+	for key in effects:
+		if effects[key] > 0:
+			effect_lines.append("%s %s +%d" % [stat_icons.get(key, ""), stat_labels.get(key, key), effects[key]])
+	var product_name: String = feature.get("product_name", "")
+	var desc: String = ""
+	if product_name != "":
+		desc += "%sの新機能が完成しました！\n\n" % product_name
+	if effect_lines.is_empty():
+		desc += "プロダクトが強化されました。"
+	else:
+		desc += "【ステータス変化】\n" + "\n".join(effect_lines)
+		desc += "\n\n利益率の上昇はMRR（月間売上）に直結します！"
+	var event_data := {
+		"title": "✅ 機能完成: %s" % feat_name,
+		"description": desc,
+		"choices": [],
+	}
+	event_popup.show_event(event_data)
 
 
 func _on_tech_debt_warning(debt_level: int) -> void:

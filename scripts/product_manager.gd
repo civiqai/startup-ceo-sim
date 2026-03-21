@@ -72,23 +72,39 @@ const TECH_STACKS := [
 	{"id": "rails", "name": "Ruby on Rails", "icon": "💎", "bonus": {"ux": 2, "awareness": 1}, "description": "スタートアップ向け高速開発。"},
 ]
 
-# 機能の定義（共通）
+# 機能の定義（共通）— ステータス別効果付き
+# ux: UX品質, design: デザイン, margin: 利益率, awareness: 知名度
 const FEATURES := {
-	"auth": {"name": "認証・ログイン", "cost": 0, "power": 5, "months": 1, "icon": "🔐"},
-	"dashboard": {"name": "ダッシュボード", "cost": 100, "power": 8, "months": 2, "icon": "📊"},
-	"analytics": {"name": "分析機能", "cost": 150, "power": 10, "months": 2, "icon": "📈"},
-	"api": {"name": "API公開", "cost": 200, "power": 12, "months": 3, "icon": "🔌"},
-	"billing": {"name": "課金システム", "cost": 250, "power": 15, "months": 3, "icon": "💳"},
-	"notification": {"name": "通知機能", "cost": 80, "power": 6, "months": 1, "icon": "🔔"},
-	"admin": {"name": "管理画面", "cost": 120, "power": 7, "months": 2, "icon": "⚙️"},
-	"export": {"name": "データ出力", "cost": 100, "power": 5, "months": 1, "icon": "📤"},
-	"gacha": {"name": "ガチャ", "cost": 200, "power": 15, "months": 2, "icon": "🎰"},
-	"pvp": {"name": "対戦機能", "cost": 300, "power": 18, "months": 3, "icon": "⚔️"},
-	"guild": {"name": "ギルド", "cost": 200, "power": 12, "months": 2, "icon": "🏰"},
-	"ranking": {"name": "ランキング", "cost": 100, "power": 8, "months": 1, "icon": "🏆"},
-	"event_system": {"name": "イベント機能", "cost": 150, "power": 10, "months": 2, "icon": "🎪"},
-	"tutorial": {"name": "チュートリアル", "cost": 80, "power": 5, "months": 1, "icon": "📖"},
-	"shop": {"name": "ショップ", "cost": 150, "power": 10, "months": 2, "icon": "🏪"},
+	"auth": {"name": "認証・ログイン", "cost": 0, "power": 5, "months": 1, "icon": "🔐",
+		"effects": {"ux": 8, "margin": 3}},
+	"dashboard": {"name": "ダッシュボード", "cost": 100, "power": 8, "months": 2, "icon": "📊",
+		"effects": {"ux": 12, "design": 5, "margin": 5}},
+	"analytics": {"name": "分析機能", "cost": 150, "power": 10, "months": 2, "icon": "📈",
+		"effects": {"ux": 6, "margin": 10, "awareness": 5}},
+	"api": {"name": "API公開", "cost": 200, "power": 12, "months": 3, "icon": "🔌",
+		"effects": {"ux": 5, "margin": 12, "awareness": 8}},
+	"billing": {"name": "課金システム", "cost": 250, "power": 15, "months": 3, "icon": "💳",
+		"effects": {"margin": 20, "ux": 5}},
+	"notification": {"name": "通知機能", "cost": 80, "power": 6, "months": 1, "icon": "🔔",
+		"effects": {"ux": 10, "awareness": 5}},
+	"admin": {"name": "管理画面", "cost": 120, "power": 7, "months": 2, "icon": "⚙️",
+		"effects": {"ux": 8, "margin": 5}},
+	"export": {"name": "データ出力", "cost": 100, "power": 5, "months": 1, "icon": "📤",
+		"effects": {"ux": 6, "margin": 6}},
+	"gacha": {"name": "ガチャ", "cost": 200, "power": 15, "months": 2, "icon": "🎰",
+		"effects": {"margin": 18, "awareness": 8}},
+	"pvp": {"name": "対戦機能", "cost": 300, "power": 18, "months": 3, "icon": "⚔️",
+		"effects": {"ux": 10, "design": 8, "awareness": 12}},
+	"guild": {"name": "ギルド", "cost": 200, "power": 12, "months": 2, "icon": "🏰",
+		"effects": {"ux": 8, "design": 5, "awareness": 8}},
+	"ranking": {"name": "ランキング", "cost": 100, "power": 8, "months": 1, "icon": "🏆",
+		"effects": {"ux": 6, "awareness": 10}},
+	"event_system": {"name": "イベント機能", "cost": 150, "power": 10, "months": 2, "icon": "🎪",
+		"effects": {"ux": 8, "awareness": 10, "margin": 5}},
+	"tutorial": {"name": "チュートリアル", "cost": 80, "power": 5, "months": 1, "icon": "📖",
+		"effects": {"ux": 12, "design": 5}},
+	"shop": {"name": "ショップ", "cost": 150, "power": 10, "months": 2, "icon": "🏪",
+		"effects": {"margin": 15, "design": 5, "ux": 5}},
 }
 
 # 複数プロダクト管理
@@ -377,18 +393,25 @@ func advance_month() -> String:
 			feats.append(dev_feat)
 			p["developed_features"] = feats
 			var feat = FEATURES.get(dev_feat, {})
-			# プロダクト力向上
-			var power_gain = feat.get("power", 5)
-			GameState.add_product_power(power_gain)
+			# ステータス別効果を直接プロダクトに適用
+			var effects: Dictionary = feat.get("effects", {})
+			var applied_effects: Dictionary = {}
+			for stat_key in effects:
+				var gain: int = effects[stat_key]
+				var old_val: int = p.get(stat_key, 0)
+				p[stat_key] = mini(old_val + gain, 100)
+				applied_effects[stat_key] = p[stat_key] - old_val
 			# 技術的負債の増加
 			p["tech_debt"] = mini(p.get("tech_debt", 0) + randi_range(3, 8), 100)
-			var product_label = ""
+			var product_label: String = ""
 			if products.size() > 1:
 				product_label = "[%s] " % p.get("name", "")
-			var result_text = "%s%s %sが完成！プロダクト力 +%d" % [
-				product_label, feat.get("icon", ""), feat.get("name", ""), power_gain]
-			var completed_feat = feat.duplicate()
+			var result_text: String = "%s%s %sが完成！" % [
+				product_label, feat.get("icon", ""), feat.get("name", "")]
+			var completed_feat: Dictionary = feat.duplicate()
 			completed_feat["id"] = dev_feat
+			completed_feat["applied_effects"] = applied_effects
+			completed_feat["product_name"] = p.get("name", "")
 			feature_completed.emit(completed_feat)
 			p["developing_feature"] = ""
 			p["dev_remaining_months"] = 0
