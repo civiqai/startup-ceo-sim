@@ -1,5 +1,6 @@
-[gd_resource type="Theme" load_steps=15 format=3 uid="uid://theme001"]
+[gd_resource type="Theme" load_steps=16 format=3 uid="uid://theme001"]
 
+[ext_resource type="FontFile" path="res://assets/fonts/NotoSansJP-Regular.ttf" id="font_noto"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_depth_flat.png" id="btn_blue_normal"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_depth_border.png" id="btn_blue_hover"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_flat.png" id="btn_blue_pressed"]
@@ -82,6 +83,7 @@ modulate_color = Color(0.08, 0.09, 0.13, 0.95)
 [sub_resource type="StyleBoxEmpty" id="rtl_focus"]
 
 [resource]
+default_font = ExtResource("font_noto")
 default_font_size = 24
 
 Button/colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
