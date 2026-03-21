@@ -20,7 +20,8 @@ const GAUGE_REPUTATION := Color(0.90, 0.70, 0.25)
 const GAUGE_BRAND := Color(0.80, 0.45, 0.65)
 const GAUGE_MORALE := Color(0.50, 0.80, 0.50)
 
-const ROOM_HEIGHT := 260  # 部屋背景の表示高さ
+const ROOM_HEIGHT_MIN := 260  # 部屋背景の最小高さ
+const GAUGES_HEIGHT := 200  # ゲージ・ステータス領域の概算高さ
 
 const ROOM_TEXTURES := [
 	"res://assets/images/rooms/office_phase1_garage.png",
@@ -37,6 +38,16 @@ var _current_phase: int = -1
 var _room_texture_cache: Dictionary = {}
 var _room_tex: Texture2D = null
 
+# プロダクトカードのスワイプ用
+var _product_page: int = 0
+var _product_count: int = 0
+var _swipe_start_x: float = 0.0
+var _swipe_offset_x: float = 0.0
+var _is_swiping: bool = false
+var _product_area_y: float = 0.0
+var _product_area_h: float = 150.0
+var _swipe_anim_offset: float = 0.0
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -45,26 +56,62 @@ func _ready() -> void:
 
 
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		var pos = event.position
-		for i in _member_rects.size():
-			if _member_rects[i].has_point(pos):
-				if i > 0:
-					member_tapped.emit(i - 1)
-				break
+		var in_product_area = pos.y >= _product_area_y and pos.y <= _product_area_y + _product_area_h and _product_count > 1
+		if event.pressed:
+			if in_product_area:
+				_is_swiping = true
+				_swipe_start_x = pos.x
+				_swipe_offset_x = 0.0
+			else:
+				for i in _member_rects.size():
+					if _member_rects[i].has_point(pos):
+						if i > 0:
+							member_tapped.emit(i - 1)
+						break
+		else:
+			if _is_swiping:
+				_is_swiping = false
+				var threshold := 60.0
+				if _swipe_offset_x < -threshold and _product_page < _product_count - 1:
+					_product_page += 1
+				elif _swipe_offset_x > threshold and _product_page > 0:
+					_product_page -= 1
+				_swipe_offset_x = 0.0
+				queue_redraw()
+
+	if event is InputEventMouseMotion and _is_swiping:
+		_swipe_offset_x = event.position.x - _swipe_start_x
+		queue_redraw()
 
 
 func _draw() -> void:
 	var rect := get_rect()
 	var w: float = rect.size.x
+	var h: float = rect.size.y
 	var font: Font = ThemeDB.fallback_font
 	_member_rects.clear()
 
-	# --- 部屋背景を描画 ---
+	# 部屋背景の高さ: コントロール全体からゲージ領域を引いた分（最低ROOM_HEIGHT_MIN）
+	var room_h := maxi(int(h - GAUGES_HEIGHT), ROOM_HEIGHT_MIN)
+
+	# --- 部屋背景を描画（アスペクト比維持、下寄せ） ---
 	if _room_tex:
-		draw_texture_rect(_room_tex, Rect2(0, 0, w, ROOM_HEIGHT), false)
+		var tex_w := float(_room_tex.get_width())
+		var tex_h := float(_room_tex.get_height())
+		# 横幅に合わせたスケールで実際の描画高さを算出
+		var scale_ratio := w / tex_w
+		var drawn_h := tex_h * scale_ratio
+		if drawn_h >= room_h:
+			# 画像が領域より大きい場合はそのまま表示（下寄せでクロップ）
+			draw_texture_rect(_room_tex, Rect2(0, room_h - drawn_h, w, drawn_h), false)
+		else:
+			# 画像が領域より小さい場合は上の余白を背景色で埋める
+			draw_rect(Rect2(0, 0, w, room_h - drawn_h), Color(0.08, 0.09, 0.12, 1.0), true)
+			draw_texture_rect(_room_tex, Rect2(0, room_h - drawn_h, w, drawn_h), false)
 	else:
-		draw_rect(Rect2(0, 0, w, ROOM_HEIGHT), Color(0.08, 0.09, 0.12, 1.0), true)
+		draw_rect(Rect2(0, 0, w, room_h), Color(0.08, 0.09, 0.12, 1.0), true)
 
 	var y_cursor := 4.0
 
@@ -96,7 +143,7 @@ func _draw() -> void:
 	y_cursor = _draw_member_grid(w, 28, font)
 
 	# --- ゲージ等は部屋の下 ---
-	y_cursor = ROOM_HEIGHT + 4.0
+	y_cursor = room_h + 4.0
 
 	var pm = get_node_or_null("/root/Main/Game/ProductManager")
 	if pm:
@@ -104,6 +151,7 @@ func _draw() -> void:
 	y_cursor += 4
 
 	y_cursor = _draw_company_section(w, y_cursor, font)
+
 
 
 ## メンバーグリッド: 大きな丸アバター + 名前 + 職種を部屋の上に表示
@@ -211,14 +259,102 @@ func _draw_member_cell(rect: Rect2, name_str: String, role_str: String, level: i
 
 func _draw_products_section(w: float, y: float, font: Font, pm) -> float:
 	var active = pm.get_active_products()
+	_product_count = active.size()
 	if active.is_empty():
 		draw_string(font, Vector2(w * 0.05, y + 20),
 			"📦 プロダクトなし（PMを採用して立ち上げましょう）",
 			HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.50, 0.55, 0.65))
 		return y + 32
-	for p in active:
-		y = _draw_product_card(w, y, font, p, pm)
+
+	_product_area_y = y
+	_product_page = clampi(_product_page, 0, _product_count - 1)
+
+	if _product_count == 1:
+		# 1つだけならそのまま表示
+		y = _draw_product_card(w, y, font, active[0], pm)
+		_product_area_h = y - _product_area_y
+		return y
+
+	# スワイプ中のオフセットを加味して現在ページのカードを描画
+	var card_h := 140.0
+	var swipe_x := _swipe_offset_x if _is_swiping else 0.0
+
+	# 現在のカードを描画（スワイプオフセット付き）
+	_draw_product_card_at(w, y, font, active[_product_page], pm, swipe_x)
+
+	# スワイプ中は隣のカードもチラ見せ
+	if _is_swiping:
+		if swipe_x < 0 and _product_page < _product_count - 1:
+			_draw_product_card_at(w, y, font, active[_product_page + 1], pm, w + swipe_x)
+		elif swipe_x > 0 and _product_page > 0:
+			_draw_product_card_at(w, y, font, active[_product_page - 1], pm, -w + swipe_x)
+
+	y += card_h + 8
+
+	# ページインジケーター（ドット）
+	var dot_r := 5.0
+	var dot_spacing := 16.0
+	var dots_w := _product_count * dot_spacing
+	var dot_start_x := (w - dots_w) / 2.0
+	for i in _product_count:
+		var dx := dot_start_x + i * dot_spacing + dot_spacing / 2.0
+		var dy := y
+		var color: Color
+		if i == _product_page:
+			color = Color(0.95, 0.85, 0.40)
+		else:
+			color = Color(0.40, 0.42, 0.50)
+		var dot_points := PackedVector2Array()
+		for j in 12:
+			var angle = j * TAU / 12
+			dot_points.append(Vector2(dx + cos(angle) * dot_r, dy + sin(angle) * dot_r))
+		draw_colored_polygon(dot_points, color)
+	y += dot_r * 2 + 6
+
+	_product_area_h = y - _product_area_y
 	return y
+
+
+func _draw_product_card_at(w: float, y: float, font: Font, product: Dictionary, pm, offset_x: float) -> void:
+	# クリップ範囲外なら描画しない
+	if absf(offset_x) >= w:
+		return
+	var type_data = pm.PRODUCT_TYPES.get(product["type"], {})
+	var card_x := w * 0.02 + offset_x
+	var card_w := w * 0.96
+	var card_h := 140.0
+
+	draw_rect(Rect2(card_x, y, card_w, card_h), Color(0.10, 0.12, 0.18, 0.9), true)
+	draw_rect(Rect2(card_x, y, card_w, card_h), Color(0.25, 0.35, 0.50, 0.6), false, 1.0)
+
+	var icon = type_data.get("icon", "📦")
+	var pname = product.get("name", "プロダクト")
+	draw_string(font, Vector2(card_x + 12, y + 22),
+		"%s %s" % [icon, pname],
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color(0.95, 0.85, 0.40))
+
+	var gauge_y := y + 34
+	var gauge_h := 12.0
+	var gauge_spacing := 22.0
+	var gauge_x := card_x + 12
+	var gauge_w := card_w * 0.54
+
+	_draw_mini_gauge(gauge_x, gauge_y, gauge_w, gauge_h, "UX", product.get("ux", 0), 100, GAUGE_UX, font)
+	_draw_mini_gauge(gauge_x, gauge_y + gauge_spacing, gauge_w, gauge_h, "デザイン", product.get("design", 0), 100, GAUGE_DESIGN, font)
+	_draw_mini_gauge(gauge_x, gauge_y + gauge_spacing * 2, gauge_w, gauge_h, "利益率", product.get("margin", 0), 100, GAUGE_MARGIN, font)
+	_draw_mini_gauge(gauge_x, gauge_y + gauge_spacing * 3, gauge_w, gauge_h, "知名度", product.get("awareness", 0), 100, GAUGE_AWARENESS, font)
+
+	var info_x := card_x + card_w * 0.60
+	var info_spacing := 24.0
+	draw_string(font, Vector2(info_x, gauge_y + 12),
+		"📱 %s人" % _format_number(product.get("users", 0)),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.75, 0.60, 0.88))
+	draw_string(font, Vector2(info_x, gauge_y + 12 + info_spacing),
+		"💹 %s万/月" % _format_number(_calc_product_revenue(product)),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.55, 0.80, 0.55))
+	draw_string(font, Vector2(info_x, gauge_y + 12 + info_spacing * 2),
+		"🔧 負債: %d" % product.get("tech_debt", 0),
+		HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color(0.80, 0.50, 0.40))
 
 
 func _draw_product_card(w: float, y: float, font: Font, product: Dictionary, pm) -> float:

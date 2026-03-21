@@ -111,12 +111,23 @@ custom_minimum_size = Vector2(100, 40)
 theme_override_font_sizes/font_size = 16
 text = "残業OFF"
 
-[node name="LogTicker" type="PanelContainer" parent="VBox"]
+[node name="LogTicker" type="VBoxContainer" parent="VBox"]
 layout_mode = 2
 
-[node name="LogLabel" type="RichTextLabel" parent="VBox/LogTicker"]
+[node name="ExpandBtn" type="Button" parent="VBox/LogTicker"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 120)
+custom_minimum_size = Vector2(0, 28)
+theme_override_colors/font_color = Color(0.60, 0.65, 0.75, 1.0)
+theme_override_font_sizes/font_size = 16
+text = "▲ 経営ログ（タップで拡大）"
+flat = true
+
+[node name="LogPanel" type="PanelContainer" parent="VBox/LogTicker"]
+layout_mode = 2
+
+[node name="LogLabel" type="RichTextLabel" parent="VBox/LogTicker/LogPanel"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 100)
 theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 text = "さあ、経営を始めよう！"

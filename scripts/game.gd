@@ -36,7 +36,9 @@ var _current_month_events: Array = []
 @onready var month_label := $VBox/Header/HBox/MonthLabel
 @onready var cash_label := $VBox/Header/HBox/CashLabel
 @onready var office_view := $VBox/OfficeView
-@onready var log_label := $VBox/LogTicker/LogLabel
+@onready var log_label := $VBox/LogTicker/LogPanel/LogLabel
+@onready var log_expand_btn := $VBox/LogTicker/ExpandBtn
+var _log_expanded := false
 @onready var action_btn := $VBox/ActionBar/HBox/ActionBtn
 @onready var team_btn := $VBox/ActionBar/HBox/TeamBtn
 @onready var day_label := $VBox/Header/HBox/DayLabel
@@ -99,6 +101,9 @@ func _ready() -> void:
 
 	# アクションメニュートグル
 	action_btn.pressed.connect(_toggle_action_menu)
+
+	# 経営ログ展開トグル
+	log_expand_btn.pressed.connect(_toggle_log_expand)
 
 	# チーム一覧ボタン
 	team_btn.pressed.connect(_on_team_btn_pressed)
@@ -1042,6 +1047,16 @@ func _update_ui() -> void:
 				# 全解放（チュートリアル完了）
 				GameState.tutorial_month = -1
 				secretary_popup._tutorial_completed = true
+
+
+func _toggle_log_expand() -> void:
+	_log_expanded = not _log_expanded
+	if _log_expanded:
+		log_label.custom_minimum_size.y = 400
+		log_expand_btn.text = "▼ 経営ログ（タップで縮小）"
+	else:
+		log_label.custom_minimum_size.y = 100
+		log_expand_btn.text = "▲ 経営ログ（タップで拡大）"
 
 
 func _add_log(text: String) -> void:
