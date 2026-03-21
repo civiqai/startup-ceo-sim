@@ -48,6 +48,19 @@ func _finish_turn() -> void:
 	turn_ended.emit()
 
 
+## 双六など、アクション効果が既に適用済みの場合のターン実行
+func execute_turn_with_result(action_result: String) -> void:
+	turn_started.emit(game_state.month + 1)
+	action_resolved.emit(action_result)
+
+	var event_data = event_manager.try_random_event()
+	if not event_data.is_empty():
+		event_triggered.emit(event_data)
+		return
+
+	_finish_turn()
+
+
 ## ゲームリセット時
 func reset() -> void:
 	event_manager.reset()

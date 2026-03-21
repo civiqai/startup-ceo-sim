@@ -1,75 +1,17 @@
-[gd_scene load_steps=8 format=3 uid="uid://game"]
+[gd_scene load_steps=5 format=3 uid="uid://game"]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1"]
 [ext_resource type="Theme" path="res://resources/theme.tres" id="2"]
+[ext_resource type="Script" path="res://scripts/office_view.gd" id="3"]
 
-[sub_resource type="StyleBoxFlat" id="stats_panel_style"]
-bg_color = Color(0.10, 0.11, 0.15, 1.0)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
+[sub_resource type="StyleBoxFlat" id="header_style"]
+bg_color = Color(0.10, 0.11, 0.16, 1.0)
 border_width_bottom = 1
 border_color = Color(0.22, 0.25, 0.32, 1.0)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
 content_margin_left = 20.0
-content_margin_top = 16.0
+content_margin_top = 10.0
 content_margin_right = 20.0
-content_margin_bottom = 16.0
-
-[sub_resource type="StyleBoxFlat" id="develop_btn"]
-bg_color = Color(0.18, 0.35, 0.55, 1.0)
-border_width_bottom = 2
-border_color = Color(0.12, 0.25, 0.42, 1.0)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-content_margin_left = 16.0
-content_margin_top = 12.0
-content_margin_right = 16.0
-content_margin_bottom = 12.0
-
-[sub_resource type="StyleBoxFlat" id="hire_btn"]
-bg_color = Color(0.50, 0.35, 0.15, 1.0)
-border_width_bottom = 2
-border_color = Color(0.38, 0.25, 0.10, 1.0)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-content_margin_left = 16.0
-content_margin_top = 12.0
-content_margin_right = 16.0
-content_margin_bottom = 12.0
-
-[sub_resource type="StyleBoxFlat" id="marketing_btn"]
-bg_color = Color(0.45, 0.20, 0.50, 1.0)
-border_width_bottom = 2
-border_color = Color(0.35, 0.14, 0.38, 1.0)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-content_margin_left = 16.0
-content_margin_top = 12.0
-content_margin_right = 16.0
-content_margin_bottom = 12.0
-
-[sub_resource type="StyleBoxFlat" id="fundraise_btn"]
-bg_color = Color(0.15, 0.45, 0.30, 1.0)
-border_width_bottom = 2
-border_color = Color(0.10, 0.32, 0.22, 1.0)
-corner_radius_top_left = 10
-corner_radius_top_right = 10
-corner_radius_bottom_right = 10
-corner_radius_bottom_left = 10
-content_margin_left = 16.0
-content_margin_top = 12.0
-content_margin_right = 16.0
-content_margin_bottom = 12.0
+content_margin_bottom = 10.0
 
 [node name="Game" type="Control"]
 layout_mode = 3
@@ -86,186 +28,112 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.09, 0.12, 1.0)
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 32
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
+theme_override_constants/separation = 0
 
-[node name="VBox" type="VBoxContainer" parent="MarginContainer"]
+[node name="Header" type="PanelContainer" parent="VBox"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_styles/panel = SubResource("header_style")
 
-[node name="HeaderLabel" type="Label" parent="MarginContainer/VBox"]
+[node name="HBox" type="HBoxContainer" parent="VBox/Header"]
 layout_mode = 2
+
+[node name="MonthLabel" type="Label" parent="VBox/Header/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 26
 text = "1ヶ月目"
-horizontal_alignment = 1
 
-[node name="StatsPanel" type="PanelContainer" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("stats_panel_style")
-
-[node name="StatsGrid" type="GridContainer" parent="MarginContainer/VBox/StatsPanel"]
-layout_mode = 2
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 10
-columns = 2
-
-[node name="CashLabel" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.75, 0.55, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "💰 資金:"
-
-[node name="CashValue" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
+[node name="CashLabel" type="Label" parent="VBox/Header/HBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.85, 0.55, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "1000万円"
+theme_override_font_sizes/font_size = 26
+text = "💰 1000万円"
 horizontal_alignment = 2
-size_flags_horizontal = 3
 
-[node name="ProductLabel" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.50, 0.65, 0.90, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "⚡ プロダクト力:"
-
-[node name="ProductValue" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.72, 0.95, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "10"
-horizontal_alignment = 2
-size_flags_horizontal = 3
-
-[node name="TeamLabel" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.60, 0.30, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "👥 チーム:"
-
-[node name="TeamValue" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.90, 0.68, 0.38, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "1人 (士気70)"
-horizontal_alignment = 2
-size_flags_horizontal = 3
-
-[node name="UsersLabel" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.75, 0.55, 0.85, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "📱 ユーザー:"
-
-[node name="UsersValue" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.80, 0.60, 0.90, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "0人"
-horizontal_alignment = 2
-size_flags_horizontal = 3
-
-[node name="ReputationLabel" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.85, 0.75, 0.35, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "⭐ 評判:"
-
-[node name="ReputationValue" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.90, 0.80, 0.40, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "30"
-horizontal_alignment = 2
-size_flags_horizontal = 3
-
-[node name="ValuationLabel" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.45, 0.80, 0.75, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "📈 時価総額:"
-
-[node name="ValuationValue" type="Label" parent="MarginContainer/VBox/StatsPanel/StatsGrid"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.50, 0.85, 0.80, 1.0)
-theme_override_font_sizes/font_size = 24
-text = "0万円"
-horizontal_alignment = 2
-size_flags_horizontal = 3
-
-[node name="Separator1" type="HSeparator" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_colors/separator_color = Color(0.25, 0.27, 0.32, 1.0)
-theme_override_constants/separation = 4
-
-[node name="LogLabel" type="RichTextLabel" parent="MarginContainer/VBox"]
+[node name="OfficeView" type="Control" parent="VBox"]
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(0, 200)
-theme_override_font_sizes/normal_font_size = 22
+custom_minimum_size = Vector2(0, 400)
+script = ExtResource("3")
+
+[node name="LogTicker" type="PanelContainer" parent="VBox"]
+layout_mode = 2
+
+[node name="LogLabel" type="RichTextLabel" parent="VBox/LogTicker"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+theme_override_font_sizes/normal_font_size = 20
 bbcode_enabled = true
 text = "さあ、経営を始めよう！"
 scroll_following = true
+scroll_active = false
 
-[node name="Separator2" type="HSeparator" parent="MarginContainer/VBox"]
+[node name="ActionBar" type="MarginContainer" parent="VBox"]
 layout_mode = 2
-theme_override_colors/separator_color = Color(0.25, 0.27, 0.32, 1.0)
-theme_override_constants/separation = 4
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
-[node name="ActionLabel" type="Label" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.70, 0.75, 0.85, 1.0)
-theme_override_font_sizes/font_size = 26
-text = "今月は何をする？"
-horizontal_alignment = 1
-
-[node name="ActionButtons" type="VBoxContainer" parent="MarginContainer/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="DevelopBtn" type="Button" parent="MarginContainer/VBox/ActionButtons"]
+[node name="ActionBtn" type="Button" parent="VBox/ActionBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 64)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("develop_btn")
+theme_override_font_sizes/font_size = 26
+text = "アクション選択"
+
+[node name="ActionMenu" type="VBoxContainer" parent="VBox"]
+layout_mode = 2
+visible = false
+theme_override_constants/separation = 6
+
+[node name="Margin" type="MarginContainer" parent="VBox/ActionMenu"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Buttons" type="VBoxContainer" parent="VBox/ActionMenu/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DevelopBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
+theme_override_font_sizes/font_size = 22
 text = "🔨 開発に集中"
 
-[node name="HireBtn" type="Button" parent="MarginContainer/VBox/ActionButtons"]
+[node name="HireBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 56)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("hire_btn")
+theme_override_font_sizes/font_size = 22
 text = "👤 採用する (200万円)"
 
-[node name="MarketingBtn" type="Button" parent="MarginContainer/VBox/ActionButtons"]
+[node name="MarketingBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 56)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("marketing_btn")
+theme_override_font_sizes/font_size = 22
 text = "📣 マーケティング (100万円)"
 
-[node name="FundraiseBtn" type="Button" parent="MarginContainer/VBox/ActionButtons"]
+[node name="FundraiseBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 56)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/normal = SubResource("fundraise_btn")
+theme_override_font_sizes/font_size = 22
 text = "💵 資金調達"
 
-[node name="TeamCareBtn" type="Button" parent="MarginContainer/VBox/ActionButtons"]
+[node name="TeamCareBtn" type="Button" parent="VBox/ActionMenu/Margin/Buttons"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 56)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
 text = "❤️ チームケア"

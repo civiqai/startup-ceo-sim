@@ -57,6 +57,9 @@ startup-ceo-sim/
 │   ├── debug_panel.gd     # デバッグパネル（パラメータ編集・速度制御・ログ）
 │   ├── auto_simulator.gd  # 自動シミュレーション（戦略別統計）
 │   ├── balance_logger.gd  # バランスログ（パラメータ履歴・テキストグラフ）
+│   ├── fundraise_types.gd  # 資金調達4タイプ定義（マス・効果・ダイスマッピング）
+│   ├── fundraise_select_popup.gd  # 資金調達タイプ選択ポップアップ
+│   ├── sugoroku_popup.gd  # 双六ポップアップUI（3ダイス・タイプ別ボード）
 │   ├── title.gd           # タイトル画面
 │   └── result.gd          # 結果画面
 ├── resources/

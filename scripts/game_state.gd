@@ -13,16 +13,46 @@ var team_morale: int = 70    # チーム士気 (0-100)
 var users: int = 0           # ユーザー数
 var reputation: int = 30     # 投資家評判 (0-100)
 var month: int = 0           # 経過月数
+var brand_value: int = 0       # ブランド価値 (0-100)
+var fundraise_cooldown: int = 0 # 資金調達クールダウン残り月数
+var total_raised: int = 0       # 累計調達額
+var fundraise_count: int = 0    # 調達回数
 
 # 月間コスト: チーム人数 × 50万
 var monthly_cost: int:
 	get:
 		return team_size * 50
 
-# 時価総額の簡易計算
+# 月間売上
+var revenue: int:
+	get:
+		if users <= 0 or product_power <= 0:
+			return 0
+		var base = users * product_power / 500
+		var brand_multiplier = 1.0 + (brand_value / 200.0)
+		return int(base * brand_multiplier)
+
+# 時価総額
 var valuation: int:
 	get:
-		return users * product_power + reputation * 100
+		var user_component = users * product_power
+		var brand_component = brand_value * brand_value * 2
+		var revenue_component = revenue * 120
+		var reputation_component = reputation * 100
+		return user_component + brand_component + revenue_component + reputation_component
+
+# 最大調達可能額
+var max_fundraise_amount: int:
+	get:
+		var base = 500
+		var product_factor = product_power * 20
+		var user_factor = mini(users, 10000) / 2
+		var brand_factor = brand_value * 30
+		var revenue_factor = revenue * 24
+		var reputation_factor = reputation * 15
+		var raw = base + product_factor + user_factor + brand_factor + revenue_factor + reputation_factor
+		var diminish = pow(0.80, fundraise_count)
+		return int(raw * diminish)
 
 # IPO条件: 時価総額100億円（1000000万円）
 const IPO_THRESHOLD := 1000000
@@ -36,11 +66,25 @@ func reset() -> void:
 	users = 0
 	reputation = 30
 	month = 0
+	brand_value = 0
+	fundraise_cooldown = 0
+	total_raised = 0
+	fundraise_count = 0
 	state_changed.emit()
 
 
 func advance_month() -> void:
 	month += 1
+	# 売上入金
+	cash += revenue
+	# オーガニックユーザー獲得
+	users += brand_value * product_power / 50
+	# ブランド自然減衰
+	if brand_value >= 20:
+		brand_value -= 1
+	# 資金調達クールダウン
+	if fundraise_cooldown > 0:
+		fundraise_cooldown -= 1
 	cash -= monthly_cost
 
 	if cash <= 0:
@@ -79,9 +123,11 @@ func apply_action(action: String) -> String:
 				result = "資金が足りずマーケティングできなかった。"
 			else:
 				cash -= 100
-				var gain = randi_range(50, 200) * product_power / 10
-				users += gain
-				result = "マーケティング実施。ユーザー +%d人" % gain
+				var brand_gain = randi_range(5, 12)
+				brand_value = mini(brand_value + brand_gain, 100)
+				var direct_users = randi_range(20, 80) * product_power / 20
+				users += direct_users
+				result = "マーケティング実施。ブランド価値 +%d、ユーザー +%d人" % [brand_gain, direct_users]
 		"fundraise":
 			var amount = randi_range(500, 2000) * reputation / 30
 			cash += amount

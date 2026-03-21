@@ -397,6 +397,7 @@ func _register_product_events() -> void:
 					gs.product_power = maxi(gs.product_power - 5, 0)
 					var lost = randi_range(10, 30)
 					gs.users = maxi(gs.users - lost, 0)
+					gs.brand_value = maxi(gs.brand_value - 5, 0)
 					return "緊急パッチをリリース。ユーザー -%d人" % lost,
 			},
 			{
@@ -405,6 +406,7 @@ func _register_product_events() -> void:
 					var lost = randi_range(50, 150)
 					gs.users = maxi(gs.users - lost, 0)
 					gs.reputation = maxi(gs.reputation - 5, 0)
+					gs.brand_value = maxi(gs.brand_value - 5, 0)
 					return "対応が遅れ、多くのユーザーが離脱。ユーザー -%d人" % lost,
 			},
 		],
@@ -489,6 +491,7 @@ func _register_product_events() -> void:
 			gs.reputation = maxi(gs.reputation - 10, 0)
 			var lost = randi_range(50, 150)
 			gs.users = maxi(gs.users - lost, 0)
+			gs.brand_value = maxi(gs.brand_value - 5, 0)
 			return "緊急対応費 -100万円、評判-10、ユーザー -%d人" % lost,
 	}
 
@@ -503,6 +506,7 @@ func _register_product_events() -> void:
 			var gain = randi_range(200, 600)
 			gs.users += gain
 			gs.reputation = mini(gs.reputation + 10, 100)
+			gs.brand_value = mini(gs.brand_value + 5, 100)
 			return "ユーザー +%d人、評判+10" % gain,
 	}
 
@@ -594,6 +598,7 @@ func _register_market_events() -> void:
 					gs.reputation = mini(gs.reputation + 20, 100)
 					var gain = randi_range(100, 300)
 					gs.users += gain
+					gs.brand_value = mini(gs.brand_value + 10, 100)
 					return "カンファレンスで大注目！評判+20、ユーザー+%d人" % gain,
 			},
 			{
@@ -666,6 +671,7 @@ func _register_random_events() -> void:
 			var gain = randi_range(500, 1500)
 			gs.users += gain
 			gs.reputation = mini(gs.reputation + 10, 100)
+			gs.brand_value = mini(gs.brand_value + 8, 100)
 			return "バズが発生！ユーザー +%d人、評判+10" % gain,
 		"chain_event_id": "media_coverage",
 	}
@@ -684,6 +690,7 @@ func _register_random_events() -> void:
 					gs.reputation = mini(gs.reputation + 15, 100)
 					var gain = randi_range(200, 500)
 					gs.users += gain
+					gs.brand_value = mini(gs.brand_value + 7, 100)
 					return "メディア掲載で知名度UP！評判+15、ユーザー+%d人" % gain,
 			},
 			{
