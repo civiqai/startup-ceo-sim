@@ -32,6 +32,11 @@ DifficultyManager="*res://scripts/difficulty_manager.gd"
 KenneyTheme="*res://scripts/kenney_theme.gd"
 AvatarLoader="*res://scripts/avatar_loader.gd"
 
+[gui]
+
+theme/custom="res://resources/theme.tres"
+theme/custom_font="res://assets/fonts/NotoSansJP-Regular.ttf"
+
 [rendering]
 
 renderer/rendering_method="mobile"
