@@ -61,7 +61,7 @@ func _rebuild_cards() -> void:
 		_cards_container.add_child(card)
 
 
-func _build_card(channel_data: Dictionary) -> PanelContainer:
+func _build_card(channel_data: Dictionary) -> Button:
 	var channel_id: String = channel_data.get("id", "")
 	var channel_name: String = channel_data.get("name", "")
 	var icon: String = channel_data.get("icon", "")
@@ -71,7 +71,12 @@ func _build_card(channel_data: Dictionary) -> PanelContainer:
 
 	var available := MarketingChannels.is_available(channel_id, GameState)
 
-	# カードのスタイル
+	# Button + テキストで構成（ScrollContainer内でスクロールとタップを自動区別）
+	var btn := Button.new()
+	btn.custom_minimum_size = Vector2(0, 90)
+	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+	# カードスタイル
 	var card_style := StyleBoxFlat.new()
 	if available:
 		card_style.bg_color = channel_color.darkened(0.7)
@@ -84,94 +89,36 @@ func _build_card(channel_data: Dictionary) -> PanelContainer:
 	card_style.border_width_left = 4
 	card_style.border_color = channel_color if available else Color(0.30, 0.30, 0.30)
 	card_style.content_margin_left = 16
-	card_style.content_margin_top = 14
+	card_style.content_margin_top = 10
 	card_style.content_margin_right = 16
-	card_style.content_margin_bottom = 14
+	card_style.content_margin_bottom = 10
 
-	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", card_style)
-	card.custom_minimum_size = Vector2(0, 90)
-
-	if not available:
-		card.modulate = Color(1, 1, 1, 0.4)
-
-	# HBoxContainer: アイコン + テキスト情報
-	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 16)
-	hbox.alignment = BoxContainer.ALIGNMENT_BEGIN
-	card.add_child(hbox)
-
-	# アイコン
-	var icon_label := Label.new()
-	icon_label.text = icon
-	icon_label.add_theme_font_size_override("font_size", 36)
-	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon_label.custom_minimum_size = Vector2(48, 0)
-	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hbox.add_child(icon_label)
-
-	# テキスト情報のVBox
-	var text_vbox := VBoxContainer.new()
-	text_vbox.add_theme_constant_override("separation", 4)
-	text_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_child(text_vbox)
-
-	# チャネル名
-	var name_label := Label.new()
-	name_label.text = channel_name
-	name_label.add_theme_font_size_override("font_size", 24)
-	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
-	text_vbox.add_child(name_label)
-
-	# 説明文
-	var desc_label := Label.new()
-	desc_label.text = description
-	desc_label.add_theme_font_size_override("font_size", 18)
-	desc_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
-	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text_vbox.add_child(desc_label)
-
-	# コスト表示
-	var cost_label := Label.new()
-	cost_label.text = "コスト: %d万円" % cost
-	cost_label.add_theme_font_size_override("font_size", 18)
-	cost_label.add_theme_color_override("font_color", COLOR_COST_TEXT)
-	text_vbox.add_child(cost_label)
-
-	# 利用不可の場合は必要資金を表示
-	if not available:
-		var unlock_label := Label.new()
-		unlock_label.text = "🔒 資金が足りません（必要: %d万円）" % cost
-		unlock_label.add_theme_font_size_override("font_size", 16)
-		unlock_label.add_theme_color_override("font_color", COLOR_UNLOCK_TEXT)
-		unlock_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		text_vbox.add_child(unlock_label)
-
-	# インタラクション設定（スクロールとタップを区別）
+	var hover_style := card_style.duplicate()
 	if available:
-		card.mouse_filter = Control.MOUSE_FILTER_PASS
-		card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		var press_pos := Vector2.ZERO
-		var is_pressed := false
-		card.gui_input.connect(func(event: InputEvent):
-			if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-				if event.pressed:
-					press_pos = event.position
-					is_pressed = true
-				elif is_pressed:
-					is_pressed = false
-					var drag_dist = press_pos.distance_to(event.position)
-					if drag_dist < 20.0:  # ドラッグ距離が短い場合のみタップ判定
-						_on_card_pressed(channel_id)
-			elif event is InputEventMouseMotion and is_pressed:
-				var drag_dist = press_pos.distance_to(event.position)
-				if drag_dist >= 20.0:
-					is_pressed = false  # スクロール操作と判断
-		)
-	else:
-		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hover_style.bg_color = channel_color.darkened(0.55)
 
-	return card
+	btn.add_theme_stylebox_override("normal", card_style)
+	btn.add_theme_stylebox_override("hover", hover_style)
+	btn.add_theme_stylebox_override("pressed", hover_style)
+	btn.add_theme_stylebox_override("disabled", card_style)
+
+	# ボタンのテキストを複数行で構成
+	var cost_text := "コスト: %d万円" % cost
+	if not available:
+		cost_text += "  🔒 資金不足"
+	btn.text = "%s %s\n%s\n%s" % [icon, channel_name, description, cost_text]
+	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE if available else COLOR_TEXT_GRAY)
+	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+
+	if not available:
+		btn.disabled = true
+		btn.modulate = Color(1, 1, 1, 0.5)
+	else:
+		var cid = channel_id
+		btn.pressed.connect(func(): _on_card_pressed(cid))
+
+	return btn
 
 
 func _on_card_pressed(channel_id: String) -> void:
