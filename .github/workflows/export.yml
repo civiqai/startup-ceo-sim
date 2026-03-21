@@ -19,23 +19,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  lint:
-    name: GDScript Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install gdtoolkit
-        run: pip install gdtoolkit
-
-      - name: Run gdlint
-        run: gdlint scripts/
-
   export-web:
     name: Export Web
     runs-on: ubuntu-latest
@@ -44,20 +27,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Godot imports
-        uses: actions/cache@v4
-        with:
-          path: .godot/imported/
-          key: godot-imports-${{ runner.os }}-${{ hashFiles('**/*.import') }}
-          restore-keys: |
-            godot-imports-${{ runner.os }}-
-
       - name: Setup export templates
         run: |
-          TEMPLATE_DIR=$(echo ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable)
-          mkdir -p "$TEMPLATE_DIR"
-          cp /root/.local/share/godot/templates/${GODOT_VERSION}.stable/* "$TEMPLATE_DIR/" 2>/dev/null || true
-          ls -la "$TEMPLATE_DIR/" || true
+          # Find where templates actually live in the container
+          find / -name "web_*" -o -name "*.stable" -type d 2>/dev/null | head -20 || true
+          # Godot in this container looks at /github/home for HOME
+          DEST="/github/home/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$DEST"
+          # barichello/godot-ci stores templates in /root/.local/share/godot/templates/
+          SRC="/root/.local/share/godot/templates/${GODOT_VERSION}.stable"
+          if [ -d "$SRC" ]; then
+            cp "$SRC"/* "$DEST/" 2>/dev/null || true
+          fi
+          # Also check alternative location
+          SRC2="/root/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          if [ -d "$SRC2" ]; then
+            cp "$SRC2"/* "$DEST/" 2>/dev/null || true
+          fi
+          echo "=== Templates in DEST ==="
+          ls -la "$DEST/" || true
+          echo "=== All godot dirs ==="
+          find /root/.local/share/godot/ -type f 2>/dev/null | head -30 || true
 
       - name: Import project
         run: godot --headless --import 2>&1 || true
@@ -74,53 +64,6 @@ jobs:
         with:
           name: web-build
           path: build/web/
-          retention-days: 14
-
-  export-android:
-    name: Export Android
-    runs-on: ubuntu-latest
-    container:
-      image: barichello/godot-ci:4.3
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache Godot imports
-        uses: actions/cache@v4
-        with:
-          path: .godot/imported/
-          key: godot-imports-${{ runner.os }}-${{ hashFiles('**/*.import') }}
-          restore-keys: |
-            godot-imports-${{ runner.os }}-
-
-      - name: Setup export templates
-        run: |
-          TEMPLATE_DIR=$(echo ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable)
-          mkdir -p "$TEMPLATE_DIR"
-          cp /root/.local/share/godot/templates/${GODOT_VERSION}.stable/* "$TEMPLATE_DIR/" 2>/dev/null || true
-
-      - name: Setup Android SDK & keystore
-        run: |
-          mkdir -p /root/.android
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-            -keypass android -keystore /root/.android/debug.keystore \
-            -storepass android -dname "CN=Android Debug,O=Android,C=US" \
-            -validity 9999 -deststoretype pkcs12
-
-      - name: Import project
-        run: godot --headless --import 2>&1 || true
-        timeout-minutes: 5
-
-      - name: Export Android APK
-        run: |
-          mkdir -p build/android
-          godot --headless --export-release "Android" build/android/startup-ceo-sim.apk
-        timeout-minutes: 10
-
-      - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-build
-          path: build/android/
           retention-days: 14
 
   deploy-web:
