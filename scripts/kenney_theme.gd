@@ -200,6 +200,13 @@ func apply_button_style(btn: Button, color: String = "blue") -> void:
 	# フォーカス枠は透明に
 	var focus := StyleBoxEmpty.new()
 	btn.add_theme_stylebox_override("focus", focus)
+	# disabled時の文字色を全色で視認性の高い暗めグレーに統一
+	btn.add_theme_color_override("font_disabled_color", Color(0.40, 0.42, 0.48))
+	# 色別の通常文字色
+	if color == "grey":
+		btn.add_theme_color_override("font_color", Color(0.88, 0.88, 0.92))
+	elif color == "yellow":
+		btn.add_theme_color_override("font_color", Color(0.15, 0.12, 0.05))
 
 
 ## PanelContainer にKenneyスタイルを適用するヘルパー

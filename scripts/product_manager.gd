@@ -37,6 +37,41 @@ const PRODUCT_TYPES := {
 	},
 }
 
+# テーマ（タイプ別）
+const PRODUCT_THEMES := {
+	"saas": [
+		{"id": "hr", "name": "HR管理", "icon": "👥", "bonus": {"ux": 3, "margin": 2}},
+		{"id": "accounting", "name": "会計・経理", "icon": "📊", "bonus": {"margin": 5}},
+		{"id": "crm", "name": "CRM・営業支援", "icon": "🤝", "bonus": {"awareness": 3, "margin": 2}},
+		{"id": "project", "name": "プロジェクト管理", "icon": "📋", "bonus": {"ux": 5}},
+		{"id": "communication", "name": "コミュニケーション", "icon": "💬", "bonus": {"ux": 3, "design": 2}},
+	],
+	"game": [
+		{"id": "rpg", "name": "RPG", "icon": "⚔️", "bonus": {"design": 5}},
+		{"id": "puzzle", "name": "パズル", "icon": "🧩", "bonus": {"ux": 3, "margin": 2}},
+		{"id": "social", "name": "ソーシャルゲーム", "icon": "🎭", "bonus": {"awareness": 3, "design": 2}},
+		{"id": "casual", "name": "カジュアルゲーム", "icon": "🎯", "bonus": {"ux": 5}},
+		{"id": "strategy", "name": "ストラテジー", "icon": "♟️", "bonus": {"design": 3, "margin": 2}},
+	],
+	"iot": [
+		{"id": "smart_home", "name": "スマートホーム", "icon": "🏠", "bonus": {"ux": 3, "design": 2}},
+		{"id": "industrial", "name": "産業IoT", "icon": "🏭", "bonus": {"margin": 5}},
+		{"id": "healthcare", "name": "ヘルスケア", "icon": "🏥", "bonus": {"awareness": 3, "margin": 2}},
+		{"id": "agriculture", "name": "スマート農業", "icon": "🌾", "bonus": {"margin": 3, "awareness": 2}},
+		{"id": "logistics", "name": "物流IoT", "icon": "🚚", "bonus": {"ux": 2, "margin": 3}},
+	],
+}
+
+# 技術スタック
+const TECH_STACKS := [
+	{"id": "react_node", "name": "React + Node.js", "icon": "⚛️", "bonus": {"ux": 3}, "description": "モダンなWeb開発。UX重視。"},
+	{"id": "flutter", "name": "Flutter", "icon": "📱", "bonus": {"design": 3}, "description": "クロスプラットフォーム。デザイン重視。"},
+	{"id": "python_django", "name": "Python + Django", "icon": "🐍", "bonus": {"margin": 2, "ux": 1}, "description": "高速開発。利益率重視。"},
+	{"id": "golang", "name": "Go + gRPC", "icon": "🔷", "bonus": {"margin": 3}, "description": "高パフォーマンス。利益率重視。"},
+	{"id": "unity", "name": "Unity", "icon": "🎮", "bonus": {"design": 2, "ux": 1}, "description": "ゲーム開発に最適。"},
+	{"id": "rails", "name": "Ruby on Rails", "icon": "💎", "bonus": {"ux": 2, "awareness": 1}, "description": "スタートアップ向け高速開発。"},
+]
+
 # 機能の定義（共通）
 const FEATURES := {
 	"auth": {"name": "認証・ログイン", "cost": 0, "power": 5, "months": 1, "icon": "🔐"},
@@ -168,6 +203,61 @@ func create_product(type_id: String) -> String:
 	active_product_index = products.size() - 1
 	product_created.emit(product)
 	return "%s %sを立ち上げました！（初期費用: %d万円）" % [type_data["icon"], type_data["name"], init_cost]
+
+
+## プロダクトを設定付きで新規作成（create_product_popup から呼ばれる）
+func create_product_with_config(config: Dictionary) -> String:
+	var type_id = config.get("type", "")
+	if not PRODUCT_TYPES.has(type_id):
+		return "不明なプロダクトタイプ"
+	if not TeamManager.has_cxo("pm") and TeamManager.get_members_by_skill("pm").is_empty():
+		return "PM(プロダクトマネージャー)が必要です"
+	var active = get_active_products()
+	if active.size() >= 3:
+		return "プロダクトは最大3つまでです"
+	var type_data = PRODUCT_TYPES[type_id]
+	var init_cost = type_data.get("init_cost", 0)
+	if GameState.cash < init_cost:
+		return "初期費用%d万円が不足しています" % init_cost
+	GameState.cash -= init_cost
+	var theme = config.get("theme", {})
+	var stack = config.get("tech_stack", {})
+	var product_name = "%s（%s）" % [type_data["name"], theme.get("name", "")]
+	var product := {
+		"type": type_id,
+		"name": product_name,
+		"theme_id": theme.get("id", ""),
+		"tech_stack_id": stack.get("id", ""),
+		"ux": config.get("initial_ux", 5),
+		"design": config.get("initial_design", 5),
+		"margin": config.get("initial_margin", 0),
+		"awareness": config.get("initial_awareness", 0),
+		"developed_features": ["auth"],
+		"developing_feature": "",
+		"dev_remaining_months": 0,
+		"tech_debt": 0,
+		"users": 0,
+		"revenue": 0,
+		"active": true,
+	}
+	products.append(product)
+	active_product_index = products.size() - 1
+	product_created.emit(product)
+	return "%s %sを立ち上げました！（初期費用: %d万円）" % [type_data["icon"], product_name, init_cost]
+
+
+## チーム構成に応じた配分ポイント数を計算
+func get_allocation_points() -> int:
+	var points := 10
+	for m in TeamManager.members:
+		match m.skill_type:
+			"engineer":
+				points += 2
+			"designer":
+				points += 2
+			"pm":
+				points += 3
+	return points
 
 
 ## サービス撤退（シャットダウン）

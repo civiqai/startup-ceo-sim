@@ -221,12 +221,19 @@ func _check_advice_condition(id: String, gs) -> bool:
 	return false
 
 
-## チュートリアルトリガーに一致するステップのforced_actionを返す
+## チュートリアル月に対応するforced_actionを返す
+## tutorial_month: 0-6 のチュートリアル進行月
 ## 戻り値: forced_action文字列（空なら全解放、nullなら該当なし）
-func get_tutorial_forced_action(trigger: String):
+func get_tutorial_forced_action_for_month(tutorial_month: int):
+	if tutorial_month < 0:
+		return null
+	# 月番号に対応するステップを検索
+	var trigger: String
+	if tutorial_month == 0:
+		trigger = "game_start"
+	else:
+		trigger = "month_%d" % tutorial_month
 	for step in SecretaryData.TUTORIAL_STEPS:
-		if step["id"] in _completed_tutorials:
-			continue
 		if step["trigger"] == trigger:
 			return step.get("forced_action", "")
 	return null

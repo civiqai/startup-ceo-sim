@@ -71,7 +71,7 @@ horizontal_alignment = 2
 layout_mode = 2
 size_flags_vertical = 3
 custom_minimum_size = Vector2(0, 400)
-mouse_filter = 2
+mouse_filter = 0
 script = ExtResource("3")
 
 [node name="SpeedBar" type="HBoxContainer" parent="VBox"]

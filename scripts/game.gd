@@ -27,6 +27,7 @@ var competitor_manager: Node
 var achievement_manager: Node
 var achievement_popup: Node
 var ending_manager: Node
+var create_product_popup: Node
 var action_menu_popup: Node
 var history_popup: Node
 var monthly_log: Array[Dictionary] = []
@@ -197,6 +198,15 @@ func _ready() -> void:
 	product_dev_popup.debt_repair_selected.connect(_on_debt_repair_selected)
 	product_dev_popup.cancelled.connect(_on_product_dev_cancelled)
 
+	# プロダクト作成ポップアップ
+	var CreateProductScript = load("res://scripts/create_product_popup.gd")
+	create_product_popup = CanvasLayer.new()
+	create_product_popup.set_script(CreateProductScript)
+	add_child(create_product_popup)
+	create_product_popup.set_product_manager(product_manager)
+	create_product_popup.product_creation_completed.connect(_on_product_creation_completed)
+	create_product_popup.cancelled.connect(_on_create_product_cancelled)
+
 	# 投資家管理
 	investor_manager = preload("res://scripts/investor_manager.gd").new()
 	investor_manager.name = "InvestorManager"
@@ -281,6 +291,14 @@ func _do_action(action: String) -> void:
 	action_btn.text = "アクション選択 ▲"
 	action_btn.disabled = true
 
+	# チュートリアル中の厳格なアクション制限
+	if GameState.tutorial_month >= 0 and action != "history":
+		var forced = secretary_popup.get_tutorial_forced_action_for_month(GameState.tutorial_month)
+		if forced != null and forced != "" and action != forced:
+			_add_log("[color=#E85555]チュートリアル中です。秘書の指示に従ってください。[/color]")
+			action_btn.disabled = false
+			return
+
 	# チャレンジモードのアクション制限
 	if not DifficultyManager.is_action_allowed(action):
 		_add_log("[color=#E85555]このチャレンジではそのアクションは使えません。[/color]")
@@ -292,7 +310,10 @@ func _do_action(action: String) -> void:
 		action_btn.disabled = false
 		return
 
-	if action == "contract_work":
+	if action == "create_product":
+		create_product_popup.show_creation()
+		return
+	elif action == "contract_work":
 		_show_contract_selection()
 		return
 	elif action == "fundraise":
@@ -303,37 +324,52 @@ func _do_action(action: String) -> void:
 	elif action == "marketing":
 		marketing_select_popup.show_selection()
 	else:
-		if action == "develop" and product_manager.selected_product_type != "":
+		if action == "develop" and product_manager.get_active_products().size() > 0:
 			product_dev_popup.show_features()
 		else:
-			# 24時間サイクルでシミュレーション
-			if speed_bar:
-				speed_bar.visible = true
-			day_cycle.start_month(action)
+			# 即時実行（develop/team_care等）
+			turn_manager.execute_turn(action)
 
 
 func _show_contract_selection() -> void:
-	var jobs = GameState.CONTRACT_JOBS.duplicate()
-	jobs.shuffle()
-	var selected = jobs.slice(0, 3)
 	var choices = []
-	for job in selected:
-		var j = job  # capture for closure
+
+	# チュートリアル中（月2）は確実に資金を得られる案件のみ
+	if GameState.tutorial_month == 2:
+		var tutorial_job = {"name": "知人のWebサイトリニューアル", "reward": 1000, "months": 1, "eng_bonus": 2}
 		choices.append({
-			"label": "%s\n💰%d万円 / %dヶ月" % [j["name"], j["reward"], j["months"]],
+			"label": "%s\n💰%d万円 / %dヶ月（初心者向け）" % [tutorial_job["name"], tutorial_job["reward"], tutorial_job["months"]],
 			"effect": func(gs):
-				gs.contract_work_remaining = j["months"]
-				gs.contract_work_name = j["name"]
-				gs.contract_work_reward = j["reward"]
-				return "%sを受注！%dヶ月間プロダクト開発が停止します。" % [j["name"], j["months"]],
+				gs.contract_work_remaining = tutorial_job["months"]
+				gs.contract_work_name = tutorial_job["name"]
+				gs.contract_work_reward = tutorial_job["reward"]
+				return "%sを受注！1ヶ月で1000万円の確実な収入です。" % tutorial_job["name"],
 		})
-	choices.append({
-		"label": "やめておく",
-		"effect": func(gs): return "受託を見送った。",
-	})
+	else:
+		var jobs = GameState.CONTRACT_JOBS.duplicate()
+		jobs.shuffle()
+		var selected = jobs.slice(0, 3)
+		for job in selected:
+			var j = job  # capture for closure
+			choices.append({
+				"label": "%s\n💰%d万円 / %dヶ月" % [j["name"], j["reward"], j["months"]],
+				"effect": func(gs):
+					gs.contract_work_remaining = j["months"]
+					gs.contract_work_name = j["name"]
+					gs.contract_work_reward = j["reward"]
+					return "%sを受注！%dヶ月間プロダクト開発が停止します。" % [j["name"], j["months"]],
+			})
+		choices.append({
+			"label": "やめておく",
+			"effect": func(gs): return "受託を見送った。",
+		})
+
+	var desc_text = "プロダクト開発は停止しますが、確実な収入とエンジニアの成長が得られます。"
+	if GameState.tutorial_month == 2:
+		desc_text = "知り合いからの簡単な案件です。1ヶ月で完了し、1000万円の報酬がもらえます。"
 	var event_data = {
 		"title": "🏗️ 受託開発案件",
-		"description": "プロダクト開発は停止しますが、確実な収入とエンジニアの成長が得られます。",
+		"description": desc_text,
 		"choices": choices,
 	}
 	_pending_contract_selection = true
@@ -569,8 +605,8 @@ func _on_turn_ended() -> void:
 	if GameState.month > 0 and GameState.month % 3 == 0:
 		SaveManager.auto_save()
 
-	# 四半期イベント（3ヶ月ごと）
-	if GameState.month > 0 and GameState.month % 3 == 0:
+	# 四半期イベント（3ヶ月ごと、チュートリアル後から）
+	if GameState.month >= 9 and GameState.month % 3 == 0:
 		_trigger_quarterly_event()
 
 	# フェーズ昇格チェック
@@ -664,12 +700,14 @@ func _on_turn_ended() -> void:
 	# チュートリアル進行
 	if GameState.tutorial_month >= 0:
 		GameState.tutorial_month += 1
-		if GameState.tutorial_month >= 6:
+		if GameState.tutorial_month >= 7:
 			GameState.tutorial_month = -1  # チュートリアル完了
 			secretary_popup._tutorial_completed = true
 		else:
 			var trigger = "month_%d" % GameState.tutorial_month
 			secretary_popup.check_tutorial(GameState, trigger)
+		# チュートリアル進行後にメニュー制限を更新
+		_update_ui()
 
 	# 秘書アドバイスチェック（状況別アドバイス優先）
 	if secretary_popup.check_situation_advice(GameState):
@@ -822,10 +860,10 @@ func _on_feature_dev_selected(feature_id: String) -> void:
 		var feat = product_manager.FEATURES.get(feature_id, {})
 		_add_log("🔨 %s %sの開発を開始（%dヶ月予定）" % [
 			feat.get("icon", ""), feat.get("name", ""), feat.get("months", 1)])
+	# 即時ターン実行（パラメータ変化を表示）
+	var result: String = GameState.apply_action("develop")
 	_update_ui()
-	day_cycle.start_month("develop")
-	if speed_bar:
-		speed_bar.visible = true
+	turn_manager.execute_turn_with_result(result)
 
 
 func _on_debt_repair_selected() -> void:
@@ -835,6 +873,19 @@ func _on_debt_repair_selected() -> void:
 
 
 func _on_product_dev_cancelled() -> void:
+	action_btn.disabled = false
+
+
+# --- プロダクト作成コールバック ---
+
+func _on_product_creation_completed(config: Dictionary) -> void:
+	var result = product_manager.create_product_with_config(config)
+	_add_log("📦 " + result)
+	_update_ui()
+	turn_manager.execute_turn_with_result(result)
+
+
+func _on_create_product_cancelled() -> void:
 	action_btn.disabled = false
 
 
@@ -894,11 +945,14 @@ func _update_ui() -> void:
 		action_menu_popup.update_hire_btn()
 		action_menu_popup.update_fundraise_btn(GameState.fundraise_cooldown)
 		action_menu_popup.update_contract_state(GameState)
+		# プロダクト作成ボタン状態更新
+		var active_products = product_manager.get_active_products()
+		var has_pm = TeamManager.has_cxo("pm") or not TeamManager.get_members_by_skill("pm").is_empty()
+		action_menu_popup.update_create_product_btn(active_products.size(), has_pm)
 
-		# チュートリアル中のアクション制限
-		if GameState.tutorial_month >= 0 and GameState.tutorial_month <= 5:
-			var trigger = "month_%d" % GameState.tutorial_month if GameState.tutorial_month > 0 else "game_start"
-			var forced = secretary_popup.get_tutorial_forced_action(trigger)
+		# チュートリアル中のアクション制限（最後に呼ぶことで他のupdateを上書き）
+		if GameState.tutorial_month >= 0:
+			var forced = secretary_popup.get_tutorial_forced_action_for_month(GameState.tutorial_month)
 			if forced != null and forced != "":
 				action_menu_popup.update_tutorial_state(forced)
 			elif forced == "":
@@ -920,11 +974,25 @@ func _add_log(text: String) -> void:
 	log_label.scroll_to_line(log_label.get_line_count())
 
 
+var _first_quarterly_done := false
+
 func _trigger_quarterly_event() -> void:
 	var quarter = GameState.month / 3
 	var rev = GameState.revenue
 	var u = GameState.users
 	var team = GameState.team_size
+
+	# 初回は秘書が事前説明
+	if not _first_quarterly_done:
+		_first_quarterly_done = true
+		secretary_popup.show_dialogue([
+			"社長、初めての四半期レビューの時間です！",
+			"3ヶ月ごとに業績を振り返り、評価が行われます。",
+			"好調なら士気UP・ボーナス、低迷なら士気DOWNとなります。",
+			"売上やユーザー数を伸ばして、良い評価を目指しましょう！",
+		])
+		# 秘書ダイアログが閉じた後に実際のイベントを表示
+		await secretary_popup.dialogue_finished
 
 	# 評価判定
 	var rating := "普通"
@@ -941,7 +1009,7 @@ func _trigger_quarterly_event() -> void:
 		rating = "まずまず"
 		morale_effect = 3
 		reputation_effect = 2
-	elif rev <= 0 and GameState.month >= 6:
+	elif rev <= 0 and GameState.month >= 9:
 		rating = "低迷"
 		morale_effect = -10
 		reputation_effect = -5

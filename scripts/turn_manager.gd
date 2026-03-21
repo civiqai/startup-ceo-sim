@@ -24,14 +24,13 @@ func execute_turn(action: String) -> void:
 	var result = game_state.apply_action(action)
 	action_resolved.emit(result)
 
-	# 2. ランダムイベント（ポップアップで表示）
-	var event_data = event_manager.try_random_event()
-	if not event_data.is_empty():
-		event_triggered.emit(event_data)
-		# ポップアップが閉じられるまで待つ（game.gd側で処理）
-		return
+	# 2. ランダムイベント（チュートリアル中はブロック）
+	if game_state.tutorial_month < 0:
+		var event_data = event_manager.try_random_event()
+		if not event_data.is_empty():
+			event_triggered.emit(event_data)
+			return
 
-	# イベントなしの場合はそのまま月末処理へ
 	_finish_turn()
 
 
@@ -53,10 +52,12 @@ func execute_turn_with_result(action_result: String) -> void:
 	turn_started.emit(game_state.month + 1)
 	action_resolved.emit(action_result)
 
-	var event_data = event_manager.try_random_event()
-	if not event_data.is_empty():
-		event_triggered.emit(event_data)
-		return
+	# チュートリアル中はランダムイベントをブロック
+	if game_state.tutorial_month < 0:
+		var event_data = event_manager.try_random_event()
+		if not event_data.is_empty():
+			event_triggered.emit(event_data)
+			return
 
 	_finish_turn()
 

@@ -10,6 +10,7 @@ var _panel_root: Control
 var _overlay: ColorRect
 var _menu_panel: PanelContainer
 var _buttons_vbox: VBoxContainer
+var _create_product_btn: Button
 var _develop_btn: Button
 var _hire_btn: Button
 var _marketing_btn: Button
@@ -65,6 +66,18 @@ func update_hire_btn() -> void:
 	_hire_btn.text = "👤 採用する"
 
 
+func update_create_product_btn(active_count: int, has_pm: bool) -> void:
+	if active_count >= 3:
+		_create_product_btn.text = "📦 プロダクト上限（3/3）"
+		_create_product_btn.disabled = true
+	elif not has_pm:
+		_create_product_btn.text = "📦 プロダクトを作る（PM必要）"
+		_create_product_btn.disabled = true
+	else:
+		_create_product_btn.text = "📦 プロダクトを作る（%d/3）" % active_count
+		_create_product_btn.disabled = false
+
+
 func update_contract_state(gs) -> void:
 	if gs.contract_work_remaining > 0:
 		# 受託中: 開発・マーケ・資金調達を無効化、受託ボタンに残り表示
@@ -84,20 +97,24 @@ func update_contract_state(gs) -> void:
 func update_tutorial_state(forced_action: String) -> void:
 	if forced_action == "":
 		# 全解放
+		_create_product_btn.disabled = false
 		_develop_btn.disabled = false
 		_hire_btn.disabled = false
 		_marketing_btn.disabled = false
 		_fundraise_btn.disabled = false
 		_contract_btn.disabled = false
 		_team_care_btn.disabled = false
+		_history_btn.disabled = false
 		return
 	# 強制アクション以外を無効化
+	_create_product_btn.disabled = (forced_action != "create_product")
 	_develop_btn.disabled = (forced_action != "develop")
 	_hire_btn.disabled = (forced_action != "hire")
 	_marketing_btn.disabled = (forced_action != "marketing")
 	_fundraise_btn.disabled = (forced_action != "fundraise")
 	_contract_btn.disabled = (forced_action != "contract_work")
 	_team_care_btn.disabled = (forced_action != "team_care")
+	_history_btn.disabled = true  # チュートリアル中はログも無効
 
 
 func _on_action_pressed(action: String) -> void:
@@ -136,7 +153,7 @@ func _build_ui() -> void:
 	_menu_panel.anchor_right = 1.0
 	_menu_panel.anchor_top = 1.0
 	_menu_panel.anchor_bottom = 1.0
-	_menu_panel.offset_top = -520
+	_menu_panel.offset_top = -590
 	_menu_panel.offset_bottom = 0
 	_menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel_root.add_child(_menu_panel)
@@ -147,6 +164,7 @@ func _build_ui() -> void:
 	_menu_panel.add_child(_buttons_vbox)
 
 	# アクションボタンを生成（各アクションに色を割当）
+	_create_product_btn = _create_action_btn("📦 プロダクトを作る", "create_product", "blue")
 	_develop_btn = _create_action_btn("🔨 開発に集中", "develop", "blue")
 	_hire_btn = _create_action_btn("👤 採用する", "hire", "green")
 	_marketing_btn = _create_action_btn("📣 マーケティング", "marketing", "yellow")
@@ -156,6 +174,7 @@ func _build_ui() -> void:
 
 	_history_btn = _create_action_btn("📋 経営ログ", "history", "grey")
 
+	_buttons_vbox.add_child(_create_product_btn)
 	_buttons_vbox.add_child(_develop_btn)
 	_buttons_vbox.add_child(_hire_btn)
 	_buttons_vbox.add_child(_marketing_btn)
