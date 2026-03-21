@@ -108,9 +108,9 @@ func _draw() -> void:
 
 ## メンバーグリッド: 大きな丸アバター + 名前 + 職種を部屋の上に表示
 func _draw_member_grid(w: float, y: float, font: Font) -> float:
-	var cols := 4
+	var cols := 3
 	var cell_w := (w - 16) / cols
-	var cell_h := 100.0
+	var cell_h := 120.0
 	var start_x := 8.0
 
 	var total = 1 + TeamManager.members.size()
@@ -141,7 +141,7 @@ func _draw_member_grid(w: float, y: float, font: Font) -> float:
 func _draw_member_cell(rect: Rect2, name_str: String, role_str: String, level: int, is_boss: bool, font: Font, avatar_id: int = 0) -> void:
 	var cx: float = rect.position.x + rect.size.x / 2.0
 	var cy: float = rect.position.y
-	var avatar_r: float = 28.0
+	var avatar_r: float = 36.0
 	var avatar_cx: float = cx
 	var avatar_cy: float = cy + avatar_r + 4.0
 	var circle_segs := 24
@@ -191,18 +191,18 @@ func _draw_member_cell(rect: Rect2, name_str: String, role_str: String, level: i
 	# イニシャル（画像なしフォールバック）
 	if not avatar_drawn:
 		var initial = name_str.left(1) if name_str.length() > 0 else "?"
-		draw_string(font, Vector2(avatar_cx - 8, avatar_cy + 8), initial,
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color(1, 1, 1))
+		draw_string(font, Vector2(avatar_cx - 10, avatar_cy + 10), initial,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 28, Color(1, 1, 1))
 
-	# 名前（大きめ）
+	# 名前
 	var display_name = name_str.left(4) if name_str.length() > 4 else name_str
-	draw_string(font, Vector2(cx - 28, avatar_cy + avatar_r + 16), display_name,
-		HORIZONTAL_ALIGNMENT_LEFT, 60, 14, Color(0.95, 0.95, 1.0))
+	draw_string(font, Vector2(cx - 36, avatar_cy + avatar_r + 18), display_name,
+		HORIZONTAL_ALIGNMENT_LEFT, 80, 18, Color(0.95, 0.95, 1.0))
 
 	# 職種
 	if role_str != "":
-		draw_string(font, Vector2(cx - 28, avatar_cy + avatar_r + 30), role_str,
-			HORIZONTAL_ALIGNMENT_LEFT, 60, 11, bg_color.lightened(0.4))
+		draw_string(font, Vector2(cx - 36, avatar_cy + avatar_r + 36), role_str,
+			HORIZONTAL_ALIGNMENT_LEFT, 80, 14, bg_color.lightened(0.4))
 
 
 # ============================================================
