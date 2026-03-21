@@ -4,7 +4,7 @@
 
 [sub_resource type="FontVariation" id="font_noto"]
 base_font = ExtResource("font_noto_file")
-variation_opentype = { "wght": 500 }
+variation_opentype = { "wght": 600 }
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_depth_flat.png" id="btn_blue_normal"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_depth_border.png" id="btn_blue_hover"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/buttons/blue_button_rectangle_flat.png" id="btn_blue_pressed"]
