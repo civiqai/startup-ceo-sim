@@ -46,6 +46,7 @@ startup-ceo-sim/
 │   ├── title.tscn         # タイトル画面
 │   ├── game.tscn          # メインゲーム画面
 │   ├── event.tscn         # イベント表示ポップアップ
+│   ├── debug_panel.tscn   # デバッグ/テストパネル（バランス調整用）
 │   └── result.tscn        # ゲーム結果画面
 ├── scripts/
 │   ├── main.gd            # シーン切替ロジック
@@ -53,6 +54,9 @@ startup-ceo-sim/
 │   ├── game.gd            # メインゲーム画面のロジック
 │   ├── turn_manager.gd    # ターン処理
 │   ├── event_manager.gd   # イベント管理
+│   ├── debug_panel.gd     # デバッグパネル（パラメータ編集・速度制御・ログ）
+│   ├── auto_simulator.gd  # 自動シミュレーション（戦略別統計）
+│   ├── balance_logger.gd  # バランスログ（パラメータ履歴・テキストグラフ）
 │   ├── title.gd           # タイトル画面
 │   └── result.gd          # 結果画面
 ├── resources/

@@ -3,16 +3,17 @@ extends Node
 
 signal turn_started(month: int)
 signal action_resolved(result_text: String)
-signal event_occurred(title: String, description: String)
+signal event_triggered(event_data: Dictionary)
+signal event_resolved(effect_text: String)
 signal turn_ended
 
 var game_state: Node
-var event_manager: EventManager
+var event_manager: Node
 
 
 func _ready() -> void:
 	game_state = get_node("/root/GameState")
-	event_manager = EventManager.new()
+	event_manager = preload("res://scripts/event_manager.gd").new()
 	add_child(event_manager)
 
 
@@ -23,13 +24,30 @@ func execute_turn(action: String) -> void:
 	var result = game_state.apply_action(action)
 	action_resolved.emit(result)
 
-	# 2. ランダムイベント
-	var event = event_manager.try_random_event()
-	if event:
-		event.effect.call(game_state)
-		event_occurred.emit(event.title, event.description)
+	# 2. ランダムイベント（ポップアップで表示）
+	var event_data = event_manager.try_random_event()
+	if not event_data.is_empty():
+		event_triggered.emit(event_data)
+		# ポップアップが閉じられるまで待つ（game.gd側で処理）
+		return
 
-	# 3. 月末処理（コスト支払い・勝敗判定）
+	# イベントなしの場合はそのまま月末処理へ
+	_finish_turn()
+
+
+## イベントポップアップが閉じられた後に呼ばれる
+func finish_after_event(effect_text: String) -> void:
+	if effect_text != "":
+		event_resolved.emit(effect_text)
+	_finish_turn()
+
+
+func _finish_turn() -> void:
+	# 月末処理（コスト支払い・勝敗判定）
 	game_state.advance_month()
-
 	turn_ended.emit()
+
+
+## ゲームリセット時
+func reset() -> void:
+	event_manager.reset()

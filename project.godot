@@ -25,6 +25,7 @@ pointing/emulate_touch_from_mouse=true
 [autoload]
 
 GameState="*res://scripts/game_state.gd"
+AudioManager="*res://scripts/audio_manager.gd"
 
 [rendering]
 
