@@ -42,7 +42,7 @@ func _rebuild_content() -> void:
 	if _history_data.is_empty():
 		var empty_label := Label.new()
 		empty_label.text = "まだ経営ログがありません。\nアクションを実行すると記録されます。"
-		empty_label.add_theme_font_size_override("font_size", 18)
+		empty_label.add_theme_font_size_override("font_size", 22)
 		empty_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_log_container.add_child(empty_label)
@@ -56,7 +56,7 @@ func _rebuild_content() -> void:
 		# 月ヘッダー
 		var header := Label.new()
 		header.text = "━━ %dヶ月目 ━━" % (month_num + 1)
-		header.add_theme_font_size_override("font_size", 20)
+		header.add_theme_font_size_override("font_size", 24)
 		header.add_theme_color_override("font_color", COLOR_MONTH_HEADER)
 		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_log_container.add_child(header)
@@ -69,7 +69,7 @@ func _rebuild_content() -> void:
 			entry.get("revenue", 0),
 			entry.get("team_size", 1),
 		]
-		summary.add_theme_font_size_override("font_size", 14)
+		summary.add_theme_font_size_override("font_size", 18)
 		summary.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		_log_container.add_child(summary)
 
@@ -78,7 +78,7 @@ func _rebuild_content() -> void:
 		for evt in events:
 			var evt_label := Label.new()
 			evt_label.text = "  " + str(evt)
-			evt_label.add_theme_font_size_override("font_size", 16)
+			evt_label.add_theme_font_size_override("font_size", 20)
 			evt_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 			evt_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 			_log_container.add_child(evt_label)
@@ -132,7 +132,7 @@ func _build_ui() -> void:
 
 	var title := Label.new()
 	title.text = "📋 経営ログ"
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.40))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
@@ -151,7 +151,7 @@ func _build_ui() -> void:
 	_close_btn = Button.new()
 	_close_btn.text = "閉じる"
 	_close_btn.custom_minimum_size = Vector2(0, 48)
-	_close_btn.add_theme_font_size_override("font_size", 22)
+	_close_btn.add_theme_font_size_override("font_size", 26)
 	KenneyTheme.apply_button_style(_close_btn, "grey")
 	_close_btn.pressed.connect(_on_close)
 	vbox.add_child(_close_btn)

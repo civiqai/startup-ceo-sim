@@ -30,6 +30,20 @@ var events: Dictionary = {}  # id -> event_data
 var pending_chain_events: Array[String] = []  # 次ターンに発生する連鎖イベントID
 
 
+## ユーザー系イベント効果をスケーリング（最低保証 + 現在値の割合）
+static func scaled_users(base_min: int, base_max: int, current_users: int) -> int:
+	var base: int = randi_range(base_min, base_max)
+	var scaled: int = int(current_users * randf_range(0.05, 0.15))
+	return maxi(base, scaled)
+
+
+## 資金系イベント効果をスケーリング（最低保証 + 月間コストの倍率）
+static func scaled_cash(base_min: int, base_max: int, monthly_cost: int) -> int:
+	var base: int = randi_range(base_min, base_max)
+	var scaled: int = int(monthly_cost * randf_range(1.0, 3.0))
+	return maxi(base, scaled)
+
+
 func _ready() -> void:
 	_register_all_events()
 
@@ -124,18 +138,20 @@ func _register_management_events() -> void:
 		"condition": func(gs): return gs.reputation >= 40,
 		"choices": [
 			{
-				"label": "全額受け入れる（資金+1500万、評判+10）",
+				"label": "全額受け入れる（資金UP大、評判+10）",
 				"effect": func(gs):
-					gs.cash += 1500
+					var gain = EventManager.scaled_cash(700, 1500, gs.monthly_cost)
+					gs.cash += gain
 					gs.reputation = mini(gs.reputation + 10, 100)
-					return "1500万円の資金を調達した！",
+					return "%d万円の資金を調達した！" % gain,
 			},
 			{
-				"label": "一部だけ受ける（資金+700万、評判+20）",
+				"label": "一部だけ受ける（資金UP小、評判+20）",
 				"effect": func(gs):
-					gs.cash += 700
+					var gain = EventManager.scaled_cash(300, 700, gs.monthly_cost)
+					gs.cash += gain
 					gs.reputation = mini(gs.reputation + 20, 100)
-					return "慎重な姿勢が投資家に好印象を与えた。",
+					return "慎重な姿勢が投資家に好印象を与えた。資金+%d万円" % gain,
 			},
 		],
 	}
@@ -211,18 +227,20 @@ func _register_management_events() -> void:
 		"condition": func(gs): return gs.product_power >= 40,
 		"choices": [
 			{
-				"label": "弁護士に相談する（資金-300万、安全に解決）",
+				"label": "弁護士に相談する（資金減少小、安全に解決）",
 				"effect": func(gs):
-					gs.cash -= 300
-					return "弁護士と共に対応し、問題を解決した。",
+					var cost = EventManager.scaled_cash(300, 800, gs.monthly_cost)
+					gs.cash -= cost
+					return "弁護士と共に対応し、問題を解決した。資金-%d万円" % cost,
 			},
 			{
-				"label": "無視する（50%で資金-800万）",
+				"label": "無視する（50%で大損害）",
 				"effect": func(gs):
 					if randf() < 0.5:
-						gs.cash -= 800
+						var cost = EventManager.scaled_cash(300, 800, gs.monthly_cost)
+						gs.cash -= cost
 						gs.reputation = maxi(gs.reputation - 15, 0)
-						return "訴訟に発展！大きな損害を被った。資金-800万、評判-15"
+						return "訴訟に発展！大きな損害を被った。資金-%d万、評判-15" % cost
 					else:
 						return "幸い、先方が訴訟を取り下げた。事なきを得た。",
 			},
@@ -475,7 +493,7 @@ func _register_product_events() -> void:
 				"label": "全力で修正（プロダクト力-5、ユーザー減少小）",
 				"effect": func(gs):
 					gs.add_product_power(-5)
-					var lost = randi_range(10, 30)
+					var lost = EventManager.scaled_users(10, 30, gs.users)
 					gs.users = maxi(gs.users - lost, 0)
 					gs.brand_value = maxi(gs.brand_value - 5, 0)
 					return "緊急パッチをリリース。ユーザー -%d人" % lost,
@@ -483,7 +501,7 @@ func _register_product_events() -> void:
 			{
 				"label": "段階的に修正（プロダクト力維持、ユーザー減少大）",
 				"effect": func(gs):
-					var lost = randi_range(50, 150)
+					var lost = EventManager.scaled_users(50, 150, gs.users)
 					gs.users = maxi(gs.users - lost, 0)
 					gs.reputation = maxi(gs.reputation - 5, 0)
 					gs.brand_value = maxi(gs.brand_value - 5, 0)
@@ -543,7 +561,7 @@ func _register_product_events() -> void:
 				"label": "サーバー増強する（資金-200万、安定成長）",
 				"effect": func(gs):
 					gs.cash -= 200
-					var gain = randi_range(300, 800)
+					var gain = EventManager.scaled_users(300, 800, gs.users)
 					gs.users += gain
 					return "インフラを増強しユーザーを受け入れた！ユーザー +%d人" % gain,
 			},
@@ -583,7 +601,7 @@ func _register_product_events() -> void:
 		"weight": 0.6,
 		"condition": func(gs): return gs.product_power >= 35,
 		"effect": func(gs):
-			var gain = randi_range(200, 600)
+			var gain = EventManager.scaled_users(200, 600, gs.users)
 			gs.users += gain
 			gs.reputation = mini(gs.reputation + 10, 100)
 			gs.brand_value = mini(gs.brand_value + 5, 100)
@@ -600,7 +618,7 @@ func _register_product_events() -> void:
 			var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
 			return pm != null and pm.tech_debt >= 50 and pm.tech_debt < 70,
 		"effect": func(gs):
-			var lost = randi_range(50, 200)
+			var lost = EventManager.scaled_users(50, 200, gs.users)
 			gs.users = maxi(gs.users - lost, 0)
 			gs.team_morale = maxi(gs.team_morale - 5, 0)
 			return "ユーザー離脱 -%d人、士気 -5" % lost,
@@ -622,13 +640,14 @@ func _register_product_events() -> void:
 					gs.cash -= 300
 					var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
 					if pm: pm.tech_debt = maxi(pm.tech_debt - 20, 0)
-					gs.users = maxi(gs.users - randi_range(200, 500), 0)
-					return "緊急パッチで復旧。ユーザー離脱あり。",
+					var lost = EventManager.scaled_users(200, 500, gs.users)
+					gs.users = maxi(gs.users - lost, 0)
+					return "緊急パッチで復旧。ユーザー -%d人離脱。" % lost,
 			},
 			{
 				"label": "様子を見る（ユーザー大量離脱）",
 				"effect": func(gs):
-					var lost = randi_range(500, 1500)
+					var lost = EventManager.scaled_users(500, 1500, gs.users)
 					gs.users = maxi(gs.users - lost, 0)
 					gs.reputation = maxi(gs.reputation - 10, 0)
 					return "復旧に時間がかかり、%d人のユーザーが離脱。評判 -10" % lost,
@@ -646,7 +665,7 @@ func _register_product_events() -> void:
 			var pm = gs.get_node_or_null("/root/Main/Game/ProductManager")
 			return pm != null and pm.tech_debt >= 90,
 		"effect": func(gs):
-			var lost = randi_range(1000, 5000)
+			var lost = EventManager.scaled_users(1000, 5000, gs.users)
 			gs.users = maxi(gs.users - lost, 0)
 			gs.reputation = maxi(gs.reputation - 20, 0)
 			gs.brand_value = maxi(gs.brand_value - 15, 0)
@@ -666,9 +685,10 @@ func _register_market_events() -> void:
 		"weight": 0.6,
 		"effect": func(gs):
 			gs.reputation = maxi(gs.reputation - 15, 0)
-			gs.cash -= randi_range(100, 300)
+			var loss = EventManager.scaled_cash(100, 300, gs.monthly_cost)
+			gs.cash -= loss
 			gs.cash = maxi(gs.cash, 0)
-			return "評判-15、資金減少。冬の時代を耐えよう。",
+			return "評判-15、資金-%d万円。冬の時代を耐えよう。" % loss,
 		"chain_event_id": "recession_followup",
 	}
 
@@ -812,7 +832,7 @@ func _register_random_events() -> void:
 		"weight": 0.5,
 		"condition": func(gs): return gs.users >= 50,
 		"effect": func(gs):
-			var gain = randi_range(500, 1500)
+			var gain = EventManager.scaled_users(500, 1500, gs.users)
 			gs.users += gain
 			gs.reputation = mini(gs.reputation + 10, 100)
 			gs.brand_value = mini(gs.brand_value + 8, 100)

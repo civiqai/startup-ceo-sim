@@ -7,6 +7,7 @@ signal popup_closed(result_text: String)
 const FundraiseTypes = preload("res://scripts/fundraise_types.gd")
 
 var _is_open := false
+var _is_emergency := false
 var _result_text := ""
 var _selected_type := ""
 
@@ -73,8 +74,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-func show_board(type_id: String) -> void:
+func show_board(type_id: String, emergency: bool = false) -> void:
 	_selected_type = type_id
+	_is_emergency = emergency
 	_result_text = ""
 	_rolling = false
 	_roll_count = 0
@@ -199,7 +201,7 @@ func _on_move_step() -> void:
 
 func _on_movement_complete() -> void:
 	var type_data = FundraiseTypes.get_type(_selected_type)
-	_result_text = FundraiseTypes.apply_effect(_selected_type, _target_position, GameState)
+	_result_text = FundraiseTypes.apply_effect(_selected_type, _target_position, GameState, _is_emergency)
 
 	# 資金調達トラッキング更新
 	GameState.fundraise_cooldown = type_data.get("cooldown", 2)
@@ -265,7 +267,7 @@ func _rebuild_board() -> void:
 		lbl.text = "%s %s" % [square_data.get("icon", ""), square_data.get("name", "")]
 		lbl.position = Vector2(0, 0)
 		lbl.size = Vector2(SQUARE_W, SQUARE_H)
-		lbl.add_theme_font_size_override("font_size", 14)
+		lbl.add_theme_font_size_override("font_size", 18)
 		lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -359,7 +361,7 @@ func _build_ui() -> void:
 	_title_label = Label.new()
 	_title_label.text = "🎲 投資家ロード"
 	_title_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.40))
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
 
@@ -370,7 +372,7 @@ func _build_ui() -> void:
 	# 説明テキスト
 	_info_label = Label.new()
 	_info_label.add_theme_color_override("font_color", Color(0.78, 0.82, 0.88))
-	_info_label.add_theme_font_size_override("font_size", 22)
+	_info_label.add_theme_font_size_override("font_size", 26)
 	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_info_label)
@@ -385,7 +387,7 @@ func _build_ui() -> void:
 	# プレイヤートークン（▼マーカー）— ボードコンテナに常駐
 	_token_label = Label.new()
 	_token_label.text = "▼"
-	_token_label.add_theme_font_size_override("font_size", 18)
+	_token_label.add_theme_font_size_override("font_size", 22)
 	_token_label.add_theme_color_override("font_color", Color(1.0, 0.30, 0.25))
 	_token_label.visible = false
 	_board_container.add_child(_token_label)
@@ -401,7 +403,7 @@ func _build_ui() -> void:
 		var dice_lbl = Label.new()
 		dice_lbl.text = "⬜ ?"
 		dice_lbl.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-		dice_lbl.add_theme_font_size_override("font_size", 40)
+		dice_lbl.add_theme_font_size_override("font_size", 44)
 		dice_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		dice_lbl.custom_minimum_size = Vector2(100, 0)
 		_dice_container.add_child(dice_lbl)
@@ -411,7 +413,7 @@ func _build_ui() -> void:
 	_sum_label = Label.new()
 	_sum_label.text = ""
 	_sum_label.add_theme_color_override("font_color", Color(0.95, 0.90, 0.55))
-	_sum_label.add_theme_font_size_override("font_size", 28)
+	_sum_label.add_theme_font_size_override("font_size", 32)
 	_sum_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_sum_label.visible = false
 	vbox.add_child(_sum_label)
@@ -421,7 +423,7 @@ func _build_ui() -> void:
 	_roll_button.text = "🎲 サイコロを振る"
 	_roll_button.custom_minimum_size = Vector2(0, 58)
 	_roll_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_roll_button.add_theme_font_size_override("font_size", 26)
+	_roll_button.add_theme_font_size_override("font_size", 30)
 	KenneyTheme.apply_button_style(_roll_button, "green")
 	_roll_button.pressed.connect(_on_roll_pressed)
 	vbox.add_child(_roll_button)
@@ -429,7 +431,7 @@ func _build_ui() -> void:
 	# 効果テキスト
 	_effect_label = Label.new()
 	_effect_label.add_theme_color_override("font_color", Color(0.50, 0.85, 0.65))
-	_effect_label.add_theme_font_size_override("font_size", 26)
+	_effect_label.add_theme_font_size_override("font_size", 30)
 	_effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_effect_label.visible = false
@@ -440,7 +442,7 @@ func _build_ui() -> void:
 	_ok_button.text = "OK"
 	_ok_button.custom_minimum_size = Vector2(0, 54)
 	_ok_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
-	_ok_button.add_theme_font_size_override("font_size", 26)
+	_ok_button.add_theme_font_size_override("font_size", 30)
 	_ok_button.pressed.connect(_on_ok_pressed)
 	_ok_button.visible = false
 	vbox.add_child(_ok_button)
@@ -464,7 +466,7 @@ func _add_arrows(square_count: int) -> void:
 
 		var arrow = Label.new()
 		arrow.text = conn[2]
-		arrow.add_theme_font_size_override("font_size", 16)
+		arrow.add_theme_font_size_override("font_size", 20)
 		arrow.add_theme_color_override("font_color", arrow_color)
 		arrow.position = mid - Vector2(5, 10)
 		_board_container.add_child(arrow)

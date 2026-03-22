@@ -126,7 +126,7 @@ func _build_slot_card(slot: String) -> PanelContainer:
 	# スロット名
 	var slot_label := Label.new()
 	slot_label.text = SLOT_NAMES.get(slot, slot)
-	slot_label.add_theme_font_size_override("font_size", 24)
+	slot_label.add_theme_font_size_override("font_size", 28)
 	if is_auto:
 		slot_label.add_theme_color_override("font_color", COLOR_AUTO_LABEL)
 	else:
@@ -141,19 +141,19 @@ func _build_slot_card(slot: String) -> PanelContainer:
 
 		var month_label := Label.new()
 		month_label.text = "📅 %dヶ月目" % info["month"]
-		month_label.add_theme_font_size_override("font_size", 20)
+		month_label.add_theme_font_size_override("font_size", 24)
 		month_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 		info_hbox.add_child(month_label)
 
 		var cash_label := Label.new()
 		cash_label.text = "💰 %d万円" % info["cash"]
-		cash_label.add_theme_font_size_override("font_size", 20)
+		cash_label.add_theme_font_size_override("font_size", 24)
 		cash_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 		info_hbox.add_child(cash_label)
 
 		var team_label := Label.new()
 		team_label.text = "👥 %d人" % info["team_size"]
-		team_label.add_theme_font_size_override("font_size", 20)
+		team_label.add_theme_font_size_override("font_size", 24)
 		team_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 		info_hbox.add_child(team_label)
 
@@ -164,13 +164,13 @@ func _build_slot_card(slot: String) -> PanelContainer:
 		if ts.length() >= 16:
 			ts = ts.left(10).replace("-", "/") + " " + ts.substr(11, 5)
 		ts_label.text = ts
-		ts_label.add_theme_font_size_override("font_size", 18)
+		ts_label.add_theme_font_size_override("font_size", 22)
 		ts_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		vbox.add_child(ts_label)
 	else:
 		var empty_label := Label.new()
 		empty_label.text = "空きスロット"
-		empty_label.add_theme_font_size_override("font_size", 20)
+		empty_label.add_theme_font_size_override("font_size", 24)
 		empty_label.add_theme_color_override("font_color", COLOR_TEXT_DIM)
 		vbox.add_child(empty_label)
 
@@ -270,7 +270,7 @@ func _show_confirm(slot: String) -> void:
 
 	var msg := Label.new()
 	msg.text = "上書きしますか？"
-	msg.add_theme_font_size_override("font_size", 26)
+	msg.add_theme_font_size_override("font_size", 30)
 	msg.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cvbox.add_child(msg)
@@ -283,7 +283,7 @@ func _show_confirm(slot: String) -> void:
 			slot_info.get("month", 0),
 			slot_info.get("cash", 0),
 		]
-		detail.add_theme_font_size_override("font_size", 20)
+		detail.add_theme_font_size_override("font_size", 24)
 		detail.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cvbox.add_child(detail)
@@ -308,7 +308,7 @@ func _show_confirm(slot: String) -> void:
 
 	var no_btn := Button.new()
 	no_btn.text = "やめる"
-	no_btn.add_theme_font_size_override("font_size", 22)
+	no_btn.add_theme_font_size_override("font_size", 26)
 	no_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	no_btn.add_theme_stylebox_override("normal", cancel_btn_style)
 	no_btn.add_theme_stylebox_override("hover", cancel_btn_style)
@@ -334,7 +334,7 @@ func _show_confirm(slot: String) -> void:
 
 	var yes_btn := Button.new()
 	yes_btn.text = "上書きする"
-	yes_btn.add_theme_font_size_override("font_size", 22)
+	yes_btn.add_theme_font_size_override("font_size", 26)
 	yes_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	yes_btn.add_theme_stylebox_override("normal", overwrite_btn_style)
 	yes_btn.add_theme_stylebox_override("hover", overwrite_btn_style)
@@ -402,7 +402,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "💾 セーブ"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE_SAVE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
@@ -428,8 +428,7 @@ func _build_ui() -> void:
 	_cancel_button = Button.new()
 	_cancel_button.text = "戻る"
 	_cancel_button.custom_minimum_size = Vector2(0, 56)
-	_cancel_button.add_theme_font_size_override("font_size", 24)
-	_cancel_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_cancel_button.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	vbox.add_child(_cancel_button)

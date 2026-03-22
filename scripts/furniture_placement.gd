@@ -450,7 +450,7 @@ func _show_placement_overlay() -> void:
 	cancel_style.content_margin_top = 4.0
 	cancel_style.content_margin_bottom = 4.0
 	cancel_btn.add_theme_stylebox_override("normal", cancel_style)
-	cancel_btn.add_theme_font_size_override("font_size", 16)
+	cancel_btn.add_theme_font_size_override("font_size", 20)
 	cancel_btn.pressed.connect(cancel_placement)
 
 	# 確定ボタン
@@ -465,7 +465,7 @@ func _show_placement_overlay() -> void:
 	confirm_style.content_margin_top = 4.0
 	confirm_style.content_margin_bottom = 4.0
 	confirm_btn.add_theme_stylebox_override("normal", confirm_style)
-	confirm_btn.add_theme_font_size_override("font_size", 16)
+	confirm_btn.add_theme_font_size_override("font_size", 20)
 	confirm_btn.pressed.connect(confirm_placement)
 
 	container.add_child(cancel_btn)

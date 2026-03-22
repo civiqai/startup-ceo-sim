@@ -145,6 +145,27 @@ func get_competitor_shares(gs) -> Array[Dictionary]:
 	return result
 
 
+## 市場シェアに基づくマーケティング効率ペナルティ
+## シェア50%以上: 1.0（ペナルティなし）、シェア低下で最低0.6倍
+func get_marketing_penalty(gs) -> float:
+	var share: float = get_player_market_share(gs)
+	if share >= 50.0:
+		return 1.0
+	return 0.6 + (share / 50.0) * 0.4
+
+
+## 競合がユーザーを奪う月次処理（プレイヤーのスコアより高い競合がいる場合）
+func monthly_competitive_pressure(gs) -> int:
+	var lost: int = 0
+	if gs.users <= 0:
+		return 0
+	var player_score: float = float(gs.users) * (gs.product_power / 50.0)
+	for i in COMPETITORS.size():
+		if competitor_scores[i] > player_score:
+			lost += int(gs.users * randf_range(0.01, 0.03))
+	return lost
+
+
 ## 競合の動向でプレイヤーに影響を与えるイベント判定
 func check_competitive_events(gs) -> Dictionary:
 	# 競合がプレイヤーを大きく引き離している場合

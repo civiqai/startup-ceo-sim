@@ -181,7 +181,7 @@ func _build_card(training_data: Dictionary) -> PanelContainer:
 	# 訓練名 + コスト
 	var name_label := Label.new()
 	name_label.text = "%s %s（%d万円）" % [icon, training_name, cost]
-	name_label.add_theme_font_size_override("font_size", 22)
+	name_label.add_theme_font_size_override("font_size", 26)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left_vbox.add_child(name_label)
@@ -189,7 +189,7 @@ func _build_card(training_data: Dictionary) -> PanelContainer:
 	# 説明
 	var desc_label := Label.new()
 	desc_label.text = description
-	desc_label.add_theme_font_size_override("font_size", 16)
+	desc_label.add_theme_font_size_override("font_size", 20)
 	desc_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	left_vbox.add_child(desc_label)
@@ -207,7 +207,7 @@ func _build_card(training_data: Dictionary) -> PanelContainer:
 
 	var effect_label := Label.new()
 	effect_label.text = " / ".join(effect_parts)
-	effect_label.add_theme_font_size_override("font_size", 16)
+	effect_label.add_theme_font_size_override("font_size", 20)
 	effect_label.add_theme_color_override("font_color", COLOR_TEXT_ACCENT)
 	left_vbox.add_child(effect_label)
 
@@ -215,13 +215,13 @@ func _build_card(training_data: Dictionary) -> PanelContainer:
 	if is_locked:
 		var lock_label := Label.new()
 		lock_label.text = "🔒 フェーズ%d以降で解放" % min_phase
-		lock_label.add_theme_font_size_override("font_size", 16)
+		lock_label.add_theme_font_size_override("font_size", 20)
 		lock_label.add_theme_color_override("font_color", COLOR_UNLOCK_TEXT)
 		left_vbox.add_child(lock_label)
 	elif not has_enough_members:
 		var need_label := Label.new()
 		need_label.text = "⚠ %d人以上必要" % min_members
-		need_label.add_theme_font_size_override("font_size", 16)
+		need_label.add_theme_font_size_override("font_size", 20)
 		need_label.add_theme_color_override("font_color", COLOR_UNLOCK_TEXT)
 		left_vbox.add_child(need_label)
 
@@ -233,7 +233,7 @@ func _build_card(training_data: Dictionary) -> PanelContainer:
 		else:
 			action_btn.text = "開催する"
 		action_btn.custom_minimum_size = Vector2(100, 48)
-		action_btn.add_theme_font_size_override("font_size", 20)
+		action_btn.add_theme_font_size_override("font_size", 24)
 
 		var disabled := not can_afford or not has_enough_members
 		action_btn.disabled = disabled
@@ -327,7 +327,7 @@ func _show_speaker_select(training_id: String, training_data: Dictionary) -> voi
 
 	var title := Label.new()
 	title.text = "🏛️ 登壇者を選択"
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", COLOR_TITLE_GOLD)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
@@ -354,7 +354,7 @@ func _show_speaker_select(training_id: String, training_data: Dictionary) -> voi
 		var skill_label: String = TeamMemberRef.get_skill_label(m.skill_type)
 		btn.text = "%s（%s Lv.%d）" % [m.member_name, skill_label, m.skill_level]
 		btn.custom_minimum_size = Vector2(0, 48)
-		btn.add_theme_font_size_override("font_size", 20)
+		btn.add_theme_font_size_override("font_size", 24)
 		KenneyTheme.apply_button_style(btn, "blue")
 		var idx := i
 		var tid := training_id
@@ -371,7 +371,7 @@ func _show_speaker_select(training_id: String, training_data: Dictionary) -> voi
 	var cancel_btn := Button.new()
 	cancel_btn.text = "戻る"
 	cancel_btn.custom_minimum_size = Vector2(0, 48)
-	cancel_btn.add_theme_font_size_override("font_size", 20)
+	cancel_btn.add_theme_font_size_override("font_size", 24)
 	KenneyTheme.apply_button_style(cancel_btn, "grey")
 	cancel_btn.pressed.connect(func():
 		_confirm_overlay.queue_free()
@@ -411,7 +411,7 @@ func _show_confirm_popup(message: String, on_confirm: Callable) -> void:
 
 	var msg_label := Label.new()
 	msg_label.text = message
-	msg_label.add_theme_font_size_override("font_size", 22)
+	msg_label.add_theme_font_size_override("font_size", 26)
 	msg_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	msg_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	msg_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -425,7 +425,7 @@ func _show_confirm_popup(message: String, on_confirm: Callable) -> void:
 	yes_btn.text = "はい"
 	yes_btn.custom_minimum_size = Vector2(0, 48)
 	yes_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	yes_btn.add_theme_font_size_override("font_size", 22)
+	yes_btn.add_theme_font_size_override("font_size", 26)
 	KenneyTheme.apply_button_style(yes_btn, "green")
 	yes_btn.pressed.connect(func():
 		AudioManager.play_sfx("click")
@@ -439,7 +439,7 @@ func _show_confirm_popup(message: String, on_confirm: Callable) -> void:
 	no_btn.text = "いいえ"
 	no_btn.custom_minimum_size = Vector2(0, 48)
 	no_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	no_btn.add_theme_font_size_override("font_size", 22)
+	no_btn.add_theme_font_size_override("font_size", 26)
 	KenneyTheme.apply_button_style(no_btn, "grey")
 	no_btn.pressed.connect(func():
 		AudioManager.play_sfx("click")
@@ -513,7 +513,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "🎓 訓練メニュー"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE_GOLD)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
@@ -525,7 +525,7 @@ func _build_ui() -> void:
 
 	# 情報ラベル
 	_info_label = Label.new()
-	_info_label.add_theme_font_size_override("font_size", 22)
+	_info_label.add_theme_font_size_override("font_size", 26)
 	_info_label.add_theme_color_override("font_color", COLOR_TEXT_ACCENT)
 	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -540,7 +540,7 @@ func _build_ui() -> void:
 	_tab_individual_btn.text = "個人訓練"
 	_tab_individual_btn.custom_minimum_size = Vector2(0, 44)
 	_tab_individual_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tab_individual_btn.add_theme_font_size_override("font_size", 20)
+	_tab_individual_btn.add_theme_font_size_override("font_size", 24)
 	_tab_individual_btn.pressed.connect(_on_tab_individual_pressed)
 	tab_row.add_child(_tab_individual_btn)
 
@@ -548,7 +548,7 @@ func _build_ui() -> void:
 	_tab_team_btn.text = "チームイベント"
 	_tab_team_btn.custom_minimum_size = Vector2(0, 44)
 	_tab_team_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_tab_team_btn.add_theme_font_size_override("font_size", 20)
+	_tab_team_btn.add_theme_font_size_override("font_size", 24)
 	_tab_team_btn.pressed.connect(_on_tab_team_pressed)
 	tab_row.add_child(_tab_team_btn)
 
@@ -568,7 +568,7 @@ func _build_ui() -> void:
 	_close_button = Button.new()
 	_close_button.text = "閉じる"
 	_close_button.custom_minimum_size = Vector2(0, 52)
-	_close_button.add_theme_font_size_override("font_size", 22)
+	_close_button.add_theme_font_size_override("font_size", 26)
 	KenneyTheme.apply_button_style(_close_button, "grey")
 	_close_button.pressed.connect(_on_close_pressed)
 	vbox.add_child(_close_button)

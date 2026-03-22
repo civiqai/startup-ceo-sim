@@ -1,16 +1,16 @@
 extends Control
 ## ゲーム結果画面 — エンディング分岐対応
 
-@onready var result_icon := $VBox/ResultIcon
-@onready var result_title := $VBox/ResultTitle
-@onready var stats_label := $VBox/StatsLabel
+@onready var result_icon := $SafeArea/VBox/ResultIcon
+@onready var result_title := $SafeArea/VBox/ResultTitle
+@onready var stats_label := $SafeArea/VBox/StatsLabel
 
 var ending_data: Dictionary = {}
 
 
 func _ready() -> void:
-	$VBox/RetryButton.pressed.connect(_on_retry)
-	$VBox/TitleButton.pressed.connect(_on_title)
+	$SafeArea/VBox/RetryButton.pressed.connect(_on_retry)
+	$SafeArea/VBox/TitleButton.pressed.connect(_on_title)
 
 	# エンディング判定
 	var EndingManager = preload("res://scripts/ending_manager.gd")
@@ -34,13 +34,13 @@ func _ready() -> void:
 	share_btn.name = "ShareBtn"
 	share_btn.text = "📱 SNSでシェア"
 	share_btn.custom_minimum_size = Vector2(0, 56)
-	share_btn.add_theme_font_size_override("font_size", 22)
+	share_btn.add_theme_font_size_override("font_size", 26)
 	share_btn.add_theme_color_override("font_color", Color(1, 1, 1))
 	KenneyTheme.apply_button_style(share_btn, "blue")
 	share_btn.pressed.connect(_on_share)
-	var retry_idx = $VBox/RetryButton.get_index()
-	$VBox.add_child(share_btn)
-	$VBox.move_child(share_btn, retry_idx)
+	var retry_idx = $SafeArea/VBox/RetryButton.get_index()
+	$SafeArea/VBox.add_child(share_btn)
+	$SafeArea/VBox.move_child(share_btn, retry_idx)
 
 	_show_ending()
 	em.queue_free()
@@ -76,18 +76,18 @@ func _show_ending() -> void:
 	var epilogue = ending_data.get("epilogue", "")
 	if epilogue != "":
 		# EpilogueLabel がなければ動的に追加
-		if not has_node("VBox/EpilogueLabel"):
+		if not has_node("SafeArea/VBox/EpilogueLabel"):
 			var epilogue_label = Label.new()
 			epilogue_label.name = "EpilogueLabel"
 			epilogue_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 			epilogue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			epilogue_label.add_theme_font_size_override("font_size", 20)
+			epilogue_label.add_theme_font_size_override("font_size", 24)
 			epilogue_label.add_theme_color_override("font_color", Color(0.75, 0.78, 0.85))
 			# StatsLabelの後に挿入
-			var idx = $VBox/StatsLabel.get_index() + 1
-			$VBox.add_child(epilogue_label)
-			$VBox.move_child(epilogue_label, idx)
-		$VBox/EpilogueLabel.text = epilogue
+			var idx = $SafeArea/VBox/StatsLabel.get_index() + 1
+			$SafeArea/VBox.add_child(epilogue_label)
+			$SafeArea/VBox.move_child(epilogue_label, idx)
+		$SafeArea/VBox/EpilogueLabel.text = epilogue
 
 	# BGM選択
 	var rank = ending_data.get("rank", "D")

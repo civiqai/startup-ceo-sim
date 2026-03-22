@@ -30,7 +30,7 @@ func show_features() -> void:
 	var title_label = Label.new()
 	title_label.text = "🔨 プロダクト開発"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 28)
+	title_label.add_theme_font_size_override("font_size", 32)
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_vbox.add_child(title_label)
 
@@ -50,7 +50,7 @@ func show_features() -> void:
 		var maint_cost = type_data.get("monthly_maintenance", 0)
 		product_info.text = "%s %s（メンテ: %d万円/月）" % [
 			type_data.get("icon", ""), current.get("name", ""), maint_cost]
-		product_info.add_theme_font_size_override("font_size", 22)
+		product_info.add_theme_font_size_override("font_size", 26)
 		product_info.add_theme_color_override("font_color", Color(0.7, 0.85, 1.0))
 		product_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_vbox.add_child(product_info)
@@ -62,7 +62,7 @@ func show_features() -> void:
 		dev_label.text = "🚧 開発中: %s %s（残り%dヶ月）" % [
 			dev_feat.get("icon", ""), dev_feat.get("name", ""),
 			_product_manager.dev_remaining_months]
-		dev_label.add_theme_font_size_override("font_size", 20)
+		dev_label.add_theme_font_size_override("font_size", 24)
 		dev_label.add_theme_color_override("font_color", Color(0.90, 0.75, 0.30))
 		dev_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		_vbox.add_child(dev_label)
@@ -72,7 +72,7 @@ func show_features() -> void:
 		var debt_label = Label.new()
 		var debt_color = Color(0.90, 0.40, 0.35) if _product_manager.tech_debt >= 60 else Color(0.90, 0.75, 0.30)
 		debt_label.text = "⚠️ 技術的負債: %d/100" % _product_manager.tech_debt
-		debt_label.add_theme_font_size_override("font_size", 20)
+		debt_label.add_theme_font_size_override("font_size", 24)
 		debt_label.add_theme_color_override("font_color", debt_color)
 		_vbox.add_child(debt_label)
 
@@ -81,7 +81,7 @@ func show_features() -> void:
 			var debt_btn = Button.new()
 			debt_btn.text = "🔧 技術的負債を返済する（1ターン消費）"
 			debt_btn.custom_minimum_size = Vector2(0, 50)
-			debt_btn.add_theme_font_size_override("font_size", 20)
+			debt_btn.add_theme_font_size_override("font_size", 24)
 			debt_btn.pressed.connect(func():
 				debt_repair_selected.emit()
 				_panel.visible = false)
@@ -92,7 +92,7 @@ func show_features() -> void:
 	if features.is_empty() and _product_manager.developing_feature == "":
 		var done_label = Label.new()
 		done_label.text = "全機能の開発が完了！"
-		done_label.add_theme_font_size_override("font_size", 22)
+		done_label.add_theme_font_size_override("font_size", 26)
 		done_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.55))
 		done_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_vbox.add_child(done_label)
@@ -104,7 +104,7 @@ func show_features() -> void:
 				feat.get("icon", ""), feat["name"], feat["cost"],
 				feat["months"], feat["power"]]
 			btn.custom_minimum_size = Vector2(0, 50)
-			btn.add_theme_font_size_override("font_size", 20)
+			btn.add_theme_font_size_override("font_size", 24)
 			btn.disabled = not can_afford
 			var fid = feat["id"]
 			btn.pressed.connect(func():
@@ -118,7 +118,7 @@ func show_features() -> void:
 		var shutdown_btn = Button.new()
 		shutdown_btn.text = "🚫 %sをサービス終了する" % current.get("name", "")
 		shutdown_btn.custom_minimum_size = Vector2(0, 50)
-		shutdown_btn.add_theme_font_size_override("font_size", 20)
+		shutdown_btn.add_theme_font_size_override("font_size", 24)
 		shutdown_btn.add_theme_color_override("font_color", Color(0.90, 0.40, 0.35))
 		var idx = _product_manager.active_product_index
 		shutdown_btn.pressed.connect(func():
@@ -132,7 +132,7 @@ func show_features() -> void:
 	if total_maint > 0:
 		var maint_label = Label.new()
 		maint_label.text = "💰 メンテコスト合計: %d万円/月" % total_maint
-		maint_label.add_theme_font_size_override("font_size", 18)
+		maint_label.add_theme_font_size_override("font_size", 22)
 		maint_label.add_theme_color_override("font_color", Color(0.80, 0.65, 0.50))
 		maint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_vbox.add_child(maint_label)
@@ -141,7 +141,7 @@ func show_features() -> void:
 	var close_btn = Button.new()
 	close_btn.text = "閉じる"
 	close_btn.custom_minimum_size = Vector2(0, 50)
-	close_btn.add_theme_font_size_override("font_size", 22)
+	close_btn.add_theme_font_size_override("font_size", 26)
 	close_btn.pressed.connect(func():
 		cancelled.emit()
 		_panel.visible = false)
@@ -172,7 +172,7 @@ func _add_kpi_summary() -> void:
 
 	var kpi_title = Label.new()
 	kpi_title.text = "📊 KPIサマリー"
-	kpi_title.add_theme_font_size_override("font_size", 22)
+	kpi_title.add_theme_font_size_override("font_size", 26)
 	kpi_title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.6))
 	kpi_vbox.add_child(kpi_title)
 
@@ -184,7 +184,7 @@ func _add_kpi_summary() -> void:
 	var mrr_label = Label.new()
 	var mrr_sign = "+" if mrr_change >= 0 else ""
 	mrr_label.text = "MRR: %d万円 (%s%d)" % [latest.get("revenue", 0), mrr_sign, mrr_change]
-	mrr_label.add_theme_font_size_override("font_size", 18)
+	mrr_label.add_theme_font_size_override("font_size", 22)
 	var mrr_color = Color(0.55, 0.85, 0.55) if mrr_change >= 0 else Color(0.90, 0.40, 0.35)
 	mrr_label.add_theme_color_override("font_color", mrr_color)
 	kpi_vbox.add_child(mrr_label)
@@ -192,14 +192,14 @@ func _add_kpi_summary() -> void:
 	var user_label = Label.new()
 	var user_sign = "+" if user_change >= 0 else ""
 	user_label.text = "ユーザー: %d人 (%s%d)" % [latest.get("users", 0), user_sign, user_change]
-	user_label.add_theme_font_size_override("font_size", 18)
+	user_label.add_theme_font_size_override("font_size", 22)
 	var user_color = Color(0.55, 0.85, 0.55) if user_change >= 0 else Color(0.90, 0.40, 0.35)
 	user_label.add_theme_color_override("font_color", user_color)
 	kpi_vbox.add_child(user_label)
 
 	var burn_label = Label.new()
 	burn_label.text = "バーンレート: %d万円/月" % latest.get("monthly_cost", 0)
-	burn_label.add_theme_font_size_override("font_size", 18)
+	burn_label.add_theme_font_size_override("font_size", 22)
 	burn_label.add_theme_color_override("font_color", Color(0.80, 0.75, 0.65))
 	kpi_vbox.add_child(burn_label)
 
@@ -220,7 +220,7 @@ func _add_kpi_summary() -> void:
 			spark_text += "%d " % rev
 		var spark_label = Label.new()
 		spark_label.text = spark_text
-		spark_label.add_theme_font_size_override("font_size", 16)
+		spark_label.add_theme_font_size_override("font_size", 20)
 		spark_label.add_theme_color_override("font_color", Color(0.65, 0.70, 0.80))
 		spark_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		kpi_vbox.add_child(spark_label)
@@ -243,7 +243,7 @@ func _add_product_selector(active_products: Array[Dictionary]) -> void:
 		var btn = Button.new()
 		btn.text = "%s %s" % [type_data.get("icon", ""), p.get("name", "")]
 		btn.custom_minimum_size = Vector2(0, 40)
-		btn.add_theme_font_size_override("font_size", 18)
+		btn.add_theme_font_size_override("font_size", 22)
 		if i == _product_manager.active_product_index:
 			btn.disabled = true  # 現在選択中
 		var idx = i

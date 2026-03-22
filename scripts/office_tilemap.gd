@@ -45,14 +45,6 @@ const OFFICE_NAMES := [
 	"自社ビル",
 ]
 
-# スキルタイプ別カラー（アバターフォールバック用）
-const SKILL_COLORS := {
-	"engineer": Color(0.25, 0.50, 0.80),
-	"designer": Color(0.75, 0.40, 0.60),
-	"marketer": Color(0.80, 0.55, 0.20),
-	"bizdev": Color(0.40, 0.65, 0.40),
-	"pm": Color(0.55, 0.45, 0.75),
-}
 
 # ウォールタイルで使う座標（アトラス内）
 # 壁アトラスは8列ごとにカラーバリエーション: 0-7=白灰, 8-15=木茶, 16-23=赤, 24-31=青緑
@@ -73,9 +65,6 @@ const WALL_TR := Vector2i(2, 1)      # 右上コーナー
 const WALL_BL := Vector2i(0, 5)      # 左下コーナー
 const WALL_BR := Vector2i(2, 5)      # 右下コーナー
 
-# アバターサイズ（ピクセル）
-const AVATAR_DISPLAY_SIZE := 28.0
-
 # ノード参照
 var _floor_layer: TileMapLayer = null
 var _wall_layer: TileMapLayer = null
@@ -84,7 +73,8 @@ var _tileset: TileSet = null
 
 var _current_phase: int = -1
 var _current_room_size: Vector2i = Vector2i.ZERO
-var _member_sprites: Dictionary = {}  # キー: メンバーインデックス文字列 → Sprite2D
+var _pathfinding: Node = null  # office_pathfinding.gd instance
+var _npcs: Dictionary = {}  # key: member index string → OfficeNPC node
 
 
 func _ready() -> void:
@@ -149,6 +139,7 @@ func _setup_layers() -> void:
 	_member_container = Node2D.new()
 	_member_container.name = "MemberContainer"
 	_member_container.z_index = 2
+	_member_container.y_sort_enabled = true
 	add_child(_member_container)
 
 
@@ -212,6 +203,8 @@ func build_office(phase: int) -> void:
 
 			_wall_layer.set_cell(Vector2i(tx, ty), WALL_SOURCE_ID, wall_coord)
 
+	_setup_pathfinding()
+
 
 ## フェーズに応じたフロアタイル座標を返す（バリエーション）
 ## フロアアトラスは3列ごとにスタイルが異なる（5ストリップ）
@@ -246,7 +239,7 @@ func _get_floor_tile_for_phase(phase: int, tx: int, ty: int) -> Vector2i:
 	return Vector2i(tile_x, tile_y)
 
 
-## TeamManager からメンバー情報を取得してスプライトを更新する
+## TeamManager からメンバー情報を取得してNPCを更新する
 func update_members() -> void:
 	if _member_container == null:
 		return
@@ -264,40 +257,43 @@ func update_members() -> void:
 			"avatar_id": m.avatar_id,
 		})
 
-	# 不要なスプライトを削除
+	# Remove excess NPCs
 	var needed_keys: Array[String] = []
 	for i in all_members.size():
 		needed_keys.append(str(i))
 
 	var to_remove: Array[String] = []
-	for key in _member_sprites:
+	for key in _npcs:
 		if not key in needed_keys:
 			to_remove.append(key)
 	for key in to_remove:
-		var sprite_node = _member_sprites[key]
-		if is_instance_valid(sprite_node):
-			sprite_node.queue_free()
-		_member_sprites.erase(key)
+		var npc = _npcs[key]
+		if is_instance_valid(npc):
+			npc.queue_free()
+		_npcs.erase(key)
 
-	# 配置位置を計算（フロア内に均等配置）
+	# Calculate home positions
 	var positions := _calculate_member_positions(all_members.size())
 
-	# 各メンバーのスプライトを作成/更新
+	# Create/update NPCs
 	for i in all_members.size():
 		var key := str(i)
 		var member_data: Dictionary = all_members[i]
-		var pos: Vector2 = positions[i] if i < positions.size() else Vector2.ZERO
+		var pos: Vector2 = positions[i] if i < positions.size() else Vector2(TILE_SIZE * 3, TILE_SIZE * 3)
+		var grid_pos := Vector2i(int(pos.x / TILE_SIZE), int(pos.y / TILE_SIZE))
 
-		if _member_sprites.has(key) and is_instance_valid(_member_sprites[key]):
-			# 既存スプライトの位置更新
-			_member_sprites[key].position = pos
-			_update_member_sprite(_member_sprites[key], member_data, i)
+		if _npcs.has(key) and is_instance_valid(_npcs[key]):
+			# Update existing NPC home position
+			_npcs[key].set_home_position(pos, grid_pos)
 		else:
-			# 新規スプライト作成
-			var sprite_root := _create_member_sprite(member_data, i)
-			sprite_root.position = pos
-			_member_container.add_child(sprite_root)
-			_member_sprites[key] = sprite_root
+			# Create new NPC
+			var npc := _create_npc(member_data, i)
+			npc.set_home_position(pos, grid_pos)
+			_member_container.add_child(npc)
+			_npcs[key] = npc
+			# Start wandering after a short delay
+			if _pathfinding != null:
+				npc.start_wandering()
 
 
 ## メンバー配置位置を計算する（フロア内部に重ならないように配置）
@@ -402,146 +398,60 @@ func _get_desk_adjacent_positions() -> Array[Vector2]:
 	return result
 
 
-## メンバースプライトノード（Sprite2D + Area2D）を新規作成する
-func _create_member_sprite(member_data: Dictionary, index: int) -> Node2D:
-	var root := Node2D.new()
-	root.name = "Member_%d" % index
+## NPC キャラクターノードを新規作成する
+func _create_npc(member_data: Dictionary, index: int) -> Node2D:
+	var NPCScript = load("res://scripts/office_npc.gd")
+	var npc := Node2D.new()
+	npc.set_script(NPCScript)
+	npc.name = "NPC_%d" % index
 
-	# アバタースプライト
-	var sprite := Sprite2D.new()
-	sprite.name = "AvatarSprite"
-	root.add_child(sprite)
+	# Assign a character sprite (1-20, deterministic based on index)
+	var char_idx: int = (index % 20) + 1
 
-	# フォールバック用の色付き丸（ColorRect の代わりにスプライト不在時に描画）
-	var fallback := _create_fallback_circle(member_data)
-	fallback.name = "FallbackCircle"
-	root.add_child(fallback)
+	npc.setup(member_data, index, char_idx)
+	if _pathfinding != null:
+		npc.set_pathfinding(_pathfinding)
 
-	# アバター画像を設定
-	_apply_avatar_texture(sprite, fallback, member_data)
-
-	# タップ検知用 Area2D
-	var area := Area2D.new()
-	area.name = "TapArea"
-	area.input_pickable = true
-
-	var collision := CollisionShape2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = AVATAR_DISPLAY_SIZE / 2.0
-	collision.shape = shape
-	area.add_child(collision)
-	root.add_child(area)
-
-	# タップシグナル接続（CEOはindex=0なのでスキップ、メンバーは index-1 で emit）
-	var member_idx := index  # キャプチャ用
-	area.input_event.connect(func(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			if member_idx > 0:
-				member_tapped.emit(member_idx - 1)
+	# Connect tap signal
+	npc.tapped.connect(func(member_idx: int) -> void:
+		member_tapped.emit(member_idx)
 	)
 
-	# 名前ラベル（簡易テキスト表示用）
-	var label := Label.new()
-	label.name = "NameLabel"
-	label.text = member_data.get("name", "")
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.position = Vector2(-30, AVATAR_DISPLAY_SIZE / 2.0 + 2)
-	label.size = Vector2(60, 16)
-	label.add_theme_font_size_override("font_size", 10)
-
-	if member_data.get("is_ceo", false):
-		label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
-	else:
-		label.add_theme_color_override("font_color", Color(0.90, 0.92, 0.96))
-
-	root.add_child(label)
-
-	return root
+	return npc
 
 
-## 既存スプライトの更新
-func _update_member_sprite(root: Node2D, member_data: Dictionary, _index: int) -> void:
-	var sprite := root.get_node_or_null("AvatarSprite") as Sprite2D
-	var fallback := root.get_node_or_null("FallbackCircle")
-	if sprite and fallback:
-		_apply_avatar_texture(sprite, fallback, member_data)
+## パスファインディングをセットアップする
+func _setup_pathfinding() -> void:
+	if _pathfinding == null:
+		var PathfindingScript = load("res://scripts/office_pathfinding.gd")
+		_pathfinding = Node.new()
+		_pathfinding.set_script(PathfindingScript)
+		_pathfinding.name = "Pathfinding"
+		add_child(_pathfinding)
 
-	var label := root.get_node_or_null("NameLabel") as Label
-	if label:
-		label.text = member_data.get("name", "")
+	_pathfinding.setup(_current_room_size)
 
+	# Get furniture-occupied cells
+	var furniture_cells: Array = []
+	if get_tree() and get_tree().root.has_node("FurnitureManager"):
+		var placed: Array = FurnitureManager.get_placed_furniture()
+		for item in placed:
+			var item_id: String = item.get("id", "")
+			var grid_pos: Vector2i = item.get("grid_position", Vector2i.ZERO)
+			if get_tree().root.has_node("FurnitureData"):
+				var data: Dictionary = FurnitureData.get_item(item_id)
+				var item_size: Vector2i = data.get("size", Vector2i(1, 1))
+				for dx in range(item_size.x):
+					for dy in range(item_size.y):
+						furniture_cells.append(grid_pos + Vector2i(dx, dy))
 
-## アバターテクスチャを適用する（AvatarLoader 経由）
-func _apply_avatar_texture(sprite: Sprite2D, fallback: Node2D, member_data: Dictionary) -> void:
-	var avatar_id: int = member_data.get("avatar_id", 0)
-
-	if avatar_id > 0 and AvatarLoader != null:
-		var tex: Texture2D = AvatarLoader.get_cached(avatar_id)
-		if tex:
-			sprite.texture = tex
-			# テクスチャサイズをアバター表示サイズに合わせる
-			var tex_size := tex.get_size()
-			if tex_size.x > 0:
-				sprite.scale = Vector2.ONE * (AVATAR_DISPLAY_SIZE / tex_size.x)
-			sprite.visible = true
-			fallback.visible = false
-			return
-		else:
-			# 非同期ロードを試行
-			AvatarLoader.get_avatar(avatar_id, func(loaded_tex: Variant) -> void:
-				if loaded_tex is Texture2D and is_instance_valid(sprite):
-					sprite.texture = loaded_tex
-					var s: Vector2 = loaded_tex.get_size()
-					if s.x > 0:
-						sprite.scale = Vector2.ONE * (AVATAR_DISPLAY_SIZE / s.x)
-					sprite.visible = true
-					if is_instance_valid(fallback):
-						fallback.visible = false
-			)
-
-	# テクスチャなし → フォールバック表示
-	sprite.visible = false
-	fallback.visible = true
+	_pathfinding.update_obstacles(_current_room_size, furniture_cells)
 
 
-## フォールバック用の色付き丸を作成する
-func _create_fallback_circle(member_data: Dictionary) -> Node2D:
-	var circle := Node2D.new()
-
-	var is_ceo: bool = member_data.get("is_ceo", false)
-	var skill: String = member_data.get("skill_type", "engineer")
-	var display_name: String = member_data.get("name", "?")
-
-	var color: Color
-	if is_ceo:
-		color = Color(0.80, 0.70, 0.25)
-	else:
-		color = SKILL_COLORS.get(skill, Color(0.4, 0.4, 0.4))
-
-	# カスタム描画用のスクリプトを使わず、簡易的に Polygon2D で丸を表現
-	var polygon := Polygon2D.new()
-	var points := PackedVector2Array()
-	var r := AVATAR_DISPLAY_SIZE / 2.0
-	var segments := 16
-	for i in segments:
-		var angle := i * TAU / segments
-		points.append(Vector2(cos(angle) * r, sin(angle) * r))
-	polygon.polygon = points
-	polygon.color = color
-	circle.add_child(polygon)
-
-	# イニシャル文字
-	var label := Label.new()
-	label.text = display_name.left(1) if display_name.length() > 0 else "?"
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.position = Vector2(-10, -10)
-	label.size = Vector2(20, 20)
-	label.add_theme_font_size_override("font_size", 14)
-	label.add_theme_color_override("font_color", Color.WHITE)
-	circle.add_child(label)
-
-	return circle
+## パスファインディングを再構築する（家具変更時に呼ばれる）
+func refresh_pathfinding() -> void:
+	if _pathfinding != null and _current_room_size != Vector2i.ZERO:
+		_setup_pathfinding()
 
 
 ## フェーズに対応するオフィス名を返す

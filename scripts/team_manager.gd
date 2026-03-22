@@ -25,12 +25,20 @@ const NAME_POOL: Array[String] = [
 const SKILL_TYPES: Array[String] = ["engineer", "designer", "marketer", "bizdev", "pm"]
 const PERSONALITIES: Array[String] = ["diligent", "creative", "mood_maker", "analytical", "leader"]
 const ROLES: Array[String] = ["member", "leader", "manager", "cxo"]
-const MAX_MEMBERS: int = 4  # 社長を除くメンバー上限
+## フェーズに応じたメンバー上限を返す
+func get_max_members() -> int:
+	var phase: int = GameState.current_phase
+	match phase:
+		0: return 2
+		1: return 4
+		2: return 6
+		3: return 8
+		_: return 10
 
 
 ## チームが上限に達しているか
 func is_full() -> bool:
-	return members.size() >= MAX_MEMBERS
+	return members.size() >= get_max_members()
 
 
 ## ランダムな候補者を生成する

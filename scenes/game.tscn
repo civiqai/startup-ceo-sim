@@ -7,6 +7,7 @@
 [ext_resource type="Script" path="res://scripts/office_camera.gd" id="office_camera"]
 [ext_resource type="Script" path="res://scripts/office_ui_overlay.gd" id="office_ui_overlay"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/panels/input_rectangle.png" id="header_tex"]
+[ext_resource type="Script" path="res://scripts/safe_area_container.gd" id="safe_area"]
 
 [sub_resource type="StyleBoxTexture" id="header_style"]
 texture = ExtResource("header_tex")
@@ -35,50 +36,55 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color(0.08, 0.09, 0.12, 1.0)
 
-[node name="VBox" type="VBoxContainer" parent="."]
+[node name="SafeArea" type="MarginContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+script = ExtResource("safe_area")
+
+[node name="VBox" type="VBoxContainer" parent="SafeArea"]
+layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Header" type="PanelContainer" parent="VBox"]
+[node name="Header" type="PanelContainer" parent="SafeArea/VBox"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("header_style")
 
-[node name="HBox" type="HBoxContainer" parent="VBox/Header"]
+[node name="HBox" type="HBoxContainer" parent="SafeArea/VBox/Header"]
 layout_mode = 2
 
-[node name="MonthLabel" type="Label" parent="VBox/Header/HBox"]
+[node name="MonthLabel" type="Label" parent="SafeArea/VBox/Header/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 30
 text = "1ヶ月目"
 
-[node name="CashLabel" type="Label" parent="VBox/Header/HBox"]
+[node name="CashLabel" type="Label" parent="SafeArea/VBox/Header/HBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.55, 0.85, 0.55, 1.0)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 30
 text = "💰 1000万円"
 horizontal_alignment = 2
 
-[node name="DayLabel" type="Label" parent="VBox/Header/HBox"]
+[node name="DayLabel" type="Label" parent="SafeArea/VBox/Header/HBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.70, 0.75, 0.85, 1.0)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 2
 
-[node name="OfficeView" type="Control" parent="VBox"]
+[node name="OfficeView" type="Control" parent="SafeArea/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 custom_minimum_size = Vector2(0, 200)
 mouse_filter = 0
 script = ExtResource("3")
 
-[node name="OfficeViewport" type="SubViewportContainer" parent="VBox"]
+[node name="OfficeViewport" type="SubViewportContainer" parent="SafeArea/VBox"]
 layout_mode = 2
+mouse_filter = 1
 size_flags_horizontal = 3
 size_flags_vertical = 3
 custom_minimum_size = Vector2(0, 200)
@@ -86,100 +92,100 @@ stretch = true
 stretch_shrink = 1
 visible = false
 
-[node name="SubViewport" type="SubViewport" parent="VBox/OfficeViewport"]
+[node name="SubViewport" type="SubViewport" parent="SafeArea/VBox/OfficeViewport"]
 handle_input_locally = true
 size = Vector2i(720, 400)
 render_target_update_mode = 4
 
-[node name="OfficeTilemap" type="Node2D" parent="VBox/OfficeViewport/SubViewport"]
+[node name="OfficeTilemap" type="Node2D" parent="SafeArea/VBox/OfficeViewport/SubViewport"]
 script = ExtResource("office_tilemap")
 
-[node name="Camera" type="Camera2D" parent="VBox/OfficeViewport/SubViewport"]
+[node name="Camera" type="Camera2D" parent="SafeArea/VBox/OfficeViewport/SubViewport"]
 script = ExtResource("office_camera")
 
-[node name="SpeedBar" type="HBoxContainer" parent="VBox"]
+[node name="SpeedBar" type="HBoxContainer" parent="SafeArea/VBox"]
 layout_mode = 2
 visible = false
 theme_override_constants/separation = 4
 alignment = 1
 
-[node name="Speed1x" type="Button" parent="VBox/SpeedBar"]
+[node name="Speed1x" type="Button" parent="SafeArea/VBox/SpeedBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(70, 40)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 22
 text = "1x"
 disabled = true
 
-[node name="Speed2x" type="Button" parent="VBox/SpeedBar"]
+[node name="Speed2x" type="Button" parent="SafeArea/VBox/SpeedBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(70, 40)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 22
 text = "2x"
 
-[node name="Speed4x" type="Button" parent="VBox/SpeedBar"]
+[node name="Speed4x" type="Button" parent="SafeArea/VBox/SpeedBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(70, 40)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 22
 text = "4x"
 
-[node name="PauseBtn" type="Button" parent="VBox/SpeedBar"]
+[node name="PauseBtn" type="Button" parent="SafeArea/VBox/SpeedBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(70, 40)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 22
 text = "⏸️"
 
-[node name="OvertimeBtn" type="Button" parent="VBox/SpeedBar"]
+[node name="OvertimeBtn" type="Button" parent="SafeArea/VBox/SpeedBar"]
 layout_mode = 2
 custom_minimum_size = Vector2(100, 40)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 text = "残業OFF"
 
-[node name="LogTicker" type="VBoxContainer" parent="VBox"]
+[node name="LogTicker" type="VBoxContainer" parent="SafeArea/VBox"]
 layout_mode = 2
 
-[node name="ExpandBtn" type="Button" parent="VBox/LogTicker"]
+[node name="ExpandBtn" type="Button" parent="SafeArea/VBox/LogTicker"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 28)
 theme_override_colors/font_color = Color(0.60, 0.65, 0.75, 1.0)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 20
 text = "▲ 経営ログ（タップで拡大）"
 flat = true
 
-[node name="LogPanel" type="PanelContainer" parent="VBox/LogTicker"]
+[node name="LogPanel" type="PanelContainer" parent="SafeArea/VBox/LogTicker"]
 layout_mode = 2
 
-[node name="LogLabel" type="RichTextLabel" parent="VBox/LogTicker/LogPanel"]
+[node name="LogLabel" type="RichTextLabel" parent="SafeArea/VBox/LogTicker/LogPanel"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 100)
-theme_override_font_sizes/normal_font_size = 20
+theme_override_font_sizes/normal_font_size = 24
 bbcode_enabled = true
 text = "さあ、経営を始めよう！"
 scroll_following = true
 scroll_active = true
 
-[node name="ActionBar" type="MarginContainer" parent="VBox"]
+[node name="ActionBar" type="MarginContainer" parent="SafeArea/VBox"]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="HBox" type="HBoxContainer" parent="VBox/ActionBar"]
+[node name="HBox" type="HBoxContainer" parent="SafeArea/VBox/ActionBar"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="ActionBtn" type="Button" parent="VBox/ActionBar/HBox"]
+[node name="ActionBtn" type="Button" parent="SafeArea/VBox/ActionBar/HBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 custom_minimum_size = Vector2(0, 64)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 30
 text = "アクション選択 ▲"
 
-[node name="TeamBtn" type="Button" parent="VBox/ActionBar/HBox"]
+[node name="TeamBtn" type="Button" parent="SafeArea/VBox/ActionBar/HBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(120, 64)
 theme_override_colors/font_color = Color(1.0, 1.0, 1.0, 1.0)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 text = "👥 1人"
 

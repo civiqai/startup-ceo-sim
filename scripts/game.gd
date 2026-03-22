@@ -36,6 +36,7 @@ var furniture_shop_popup: Node
 var furniture_detail_popup: Node
 var furniture_placement: Node  # FurniturePlacement node on OfficeTilemap
 var office_expansion_popup: Node
+var phase_celebration_popup: Node
 var monthly_log: Array[Dictionary] = []
 var _current_month_events: Array = []
 
@@ -53,6 +54,18 @@ var event_popup: Node
 var _pending_marketing_result: Dictionary = {}
 var _pending_contract_selection: bool = false
 var _is_emergency_fundraise: bool = false
+
+# フェーズ進捗UI
+var _phase_progress_overlay: ColorRect
+var _phase_progress_panel: PanelContainer
+var _phase_progress_rows: Array[Control] = []       # 各条件の行コンテナ
+var _phase_progress_name_labels: Array[Label] = []   # 条件名ラベル
+var _phase_progress_value_labels: Array[Label] = []  # 現在値/目標値ラベル
+var _phase_progress_bars: Array[ProgressBar] = []
+var _phase_current_label: Label   # 現在のフェーズ名
+var _phase_next_name_label: Label # 次のフェーズ名
+var _phase_unlock_label: Label    # アンロック報酬
+var _phase_info_btn: TextureButton
 
 # TileMapオフィス関連
 @onready var office_viewport_container := $SafeArea/VBox/OfficeViewport
@@ -204,6 +217,12 @@ func _ready() -> void:
 	add_child(milestone_popup)
 	milestone_popup.popup_closed.connect(_on_milestone_popup_closed)
 
+	# フェーズ昇格お祝いポップアップ
+	var PhaseCelebrationScript = load("res://scripts/phase_celebration_popup.gd")
+	phase_celebration_popup = CanvasLayer.new()
+	phase_celebration_popup.set_script(PhaseCelebrationScript)
+	add_child(phase_celebration_popup)
+
 	# 秘書ポップアップ
 	var SecretaryPopupScript = load("res://scripts/secretary_popup.gd")
 	secretary_popup = CanvasLayer.new()
@@ -312,6 +331,9 @@ func _ready() -> void:
 	# TileMapオフィスの初期化
 	_setup_tilemap_office()
 
+	# フェーズ進捗パネルをヘッダーの直後に挿入
+	_build_phase_progress_panel()
+
 	_add_log("さあ、経営を始めよう！")
 	_update_ui()
 	AudioManager.play_bgm("game")
@@ -351,8 +373,8 @@ func _setup_tilemap_office() -> void:
 	_update_office_camera_bounds()
 	print("[TileMapOffice] camera pos=%s, zoom=%s, bounds=%s" % [office_camera.position, office_camera.zoom, office_camera.map_bounds])
 
-	# メンバータップシグナルを接続
-	office_tilemap.member_tapped.connect(_on_team_member_selected)
+	# メンバータップシグナルを接続（タイルマップ経由）
+	office_tilemap.member_tapped.connect(_on_tilemap_member_tapped)
 
 	# UIオーバーレイは一旦無効（既存のVBox内UIと重複するため）
 	# TODO: Phase 2でオフィス専用画面として独立させる際に有効化
@@ -399,7 +421,7 @@ func _build_shop_button() -> void:
 	btn.name = "ShopButton"
 	btn.text = "🛒 家具"
 	btn.custom_minimum_size = Vector2(100, 44)
-	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_font_size_override("font_size", 20)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.18, 0.48, 0.32, 0.9)
 	style.set_corner_radius_all(6)
@@ -416,7 +438,7 @@ func _build_shop_button() -> void:
 	expand_btn.name = "ExpandButton"
 	expand_btn.text = "🏗️ 拡張"
 	expand_btn.custom_minimum_size = Vector2(100, 44)
-	expand_btn.add_theme_font_size_override("font_size", 16)
+	expand_btn.add_theme_font_size_override("font_size", 20)
 	var expand_style := StyleBoxFlat.new()
 	expand_style.bg_color = Color(0.45, 0.35, 0.15, 0.9)
 	expand_style.set_corner_radius_all(6)
@@ -543,7 +565,7 @@ func _show_contract_selection() -> void:
 				return "%sを受注！1ヶ月で1000万円の確実な収入です。" % tutorial_job["name"],
 		})
 	else:
-		var jobs = GameState.CONTRACT_JOBS.duplicate()
+		var jobs = GameState.get_scaled_contract_jobs()
 		jobs.shuffle()
 		var selected = jobs.slice(0, 3)
 		for job in selected:
@@ -583,7 +605,7 @@ func _on_event_triggered(event_data: Dictionary) -> void:
 
 
 func _on_fundraise_type_selected(type_id: String) -> void:
-	sugoroku_popup.show_board(type_id)
+	sugoroku_popup.show_board(type_id, _is_emergency_fundraise)
 
 
 func _on_fundraise_cancelled() -> void:
@@ -759,6 +781,7 @@ func _on_team_member_selected(member_index: int) -> void:
 		"training": m.training,
 		"training_remaining": m.training_remaining,
 		"turnover_risk": m.turnover_risk,
+		"stamina": m.stamina,
 	}
 	member_detail_popup.show_member(data, member_index)
 
@@ -798,8 +821,34 @@ func _on_member_leveled_up(member, old_level: int, new_level: int) -> void:
 
 
 func _on_member_detail_closed() -> void:
+	# タイルマップから開いた場合はチーム一覧を再表示しない
+	if member_detail_popup._opened_from_tilemap:
+		return
 	# チーム一覧を再表示
 	_on_team_btn_pressed()
+
+
+## タイルマップのNPCタップ時のハンドラ
+func _on_tilemap_member_tapped(member_index: int) -> void:
+	if member_index < 0 or member_index >= TeamManager.members.size():
+		return
+	var m = TeamManager.members[member_index]
+	var data := {
+		"member_name": m.member_name,
+		"skill_type": m.skill_type,
+		"skill_level": m.skill_level,
+		"personality": m.personality,
+		"role": m.role,
+		"salary": m.salary,
+		"months_employed": m.months_employed,
+		"cxo_exists_for_skill": TeamManager.has_cxo(m.skill_type),
+		"experience": m.experience,
+		"training": m.training,
+		"training_remaining": m.training_remaining,
+		"turnover_risk": m.turnover_risk,
+		"stamina": m.stamina,
+	}
+	member_detail_popup.show_member(data, member_index, true)
 
 
 func _on_training_requested(member_index: int) -> void:
@@ -1049,6 +1098,13 @@ func _on_event_popup_closed(_choice_index: int) -> void:
 	if effect_text != "":
 		_add_log("[color=#FFD966]→ %s[/color]" % effect_text)
 	_update_ui()
+
+	# 特殊エンディングを受け入れた場合、結果画面へ遷移
+	var forced = GameState.get_meta("forced_ending", "")
+	if forced != "" and forced != "bankruptcy" and forced != "ipo":
+		_on_game_clear(effect_text)
+		return
+
 	turn_manager.finish_after_event(effect_text)
 
 	# イベント後の秘書コメンタリー
@@ -1152,9 +1208,17 @@ func _on_turn_ended() -> void:
 
 	# 特殊エンディングチェック
 	var special_endings = ending_manager.check_special_endings(GameState)
-	if not special_endings.is_empty():
+	# 辞退クールダウン中のエンディングを除外（辞退後12ヶ月間は再提案しない）
+	var declined: Dictionary = GameState.get_meta("declined_endings", {})
+	var filtered_endings: Array[Dictionary] = []
+	for se_candidate in special_endings:
+		var se_id: String = se_candidate.get("id", "")
+		if declined.has(se_id) and GameState.month - int(declined[se_id]) < 12:
+			continue
+		filtered_endings.append(se_candidate)
+	if not filtered_endings.is_empty():
 		# 最初の特殊エンディングを提案（イベントポップアップ形式）
-		var se = special_endings[0]
+		var se = filtered_endings[0]
 		var event_data = {
 			"title": "📩 " + se.get("name", "") + "の提案",
 			"description": se.get("title", "") + "\nこの提案を受け入れますか？",
@@ -1168,6 +1232,9 @@ func _on_turn_ended() -> void:
 				{
 					"label": "断って経営を続ける",
 					"effect": func(gs):
+						var d: Dictionary = gs.get_meta("declined_endings", {})
+						d[se.get("id", "")] = gs.month
+						gs.set_meta("declined_endings", d)
 						return "提案を断り、経営を続ける。",
 				},
 			],
@@ -1250,6 +1317,9 @@ func _on_phase_changed(old_phase: int, new_phase: int) -> void:
 	_add_log("[color=#55CC70]%s %s — %s[/color]" % [
 		new_data.get("icon", ""), new_data.get("name", ""),
 		new_data.get("description", "")])
+
+	# フェーズ昇格お祝いポップアップ
+	phase_celebration_popup.show_phase(new_data)
 
 	# フェーズ進行に連動したチュートリアル
 	secretary_popup.check_tutorial(GameState, "phase_%d" % new_phase)
@@ -1521,6 +1591,9 @@ func _update_ui() -> void:
 	# フェーズ表示
 	month_label.text = "%s %dヶ月目" % [phase_manager.get_phase_name(), GameState.month + 1]
 
+	# フェーズ進捗パネル更新
+	_update_phase_progress()
+
 	# 資金 - 色を残高で変える
 	var cash_color: Color
 	if GameState.cash <= 200:
@@ -1744,3 +1817,275 @@ func _format_number_local(n: int) -> String:
 	elif n >= 10000:
 		return "%d万" % (n / 10000) if n >= 100000 else str(n)
 	return str(n)
+
+
+# --- フェーズ進捗パネル ---
+
+func _build_phase_progress_panel() -> void:
+	# ヘッダーHBoxにicons8ヘルプアイコンボタンを追加
+	var header_hbox = $SafeArea/VBox/Header/HBox
+	_phase_info_btn = TextureButton.new()
+	var icon_tex := load("res://assets/images/ui/icon_help.png")
+	_phase_info_btn.texture_normal = icon_tex
+	_phase_info_btn.ignore_texture_size = true
+	_phase_info_btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	_phase_info_btn.custom_minimum_size = Vector2(20, 20)
+	_phase_info_btn.size = Vector2(20, 20)
+	_phase_info_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_phase_info_btn.modulate = Color(0.85, 0.85, 0.90, 0.8)
+	_phase_info_btn.pressed.connect(_toggle_phase_progress)
+	header_hbox.add_child(_phase_info_btn)
+
+	# 背景オーバーレイ（タップで閉じる）
+	_phase_progress_overlay = ColorRect.new()
+	_phase_progress_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_phase_progress_overlay.color = Color(0, 0, 0, 0.4)
+	_phase_progress_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_phase_progress_overlay.z_index = 9
+	_phase_progress_overlay.visible = false
+	_phase_progress_overlay.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed:
+			_close_phase_progress()
+	)
+	# Game（ルートControl）直下に配置してMarginContainerのレイアウトを避ける
+	add_child(_phase_progress_overlay)
+
+	# フローティングパネル（Game直下に配置、初期非表示）
+	_phase_progress_panel = PanelContainer.new()
+	_phase_progress_panel.name = "PhaseProgressPanel"
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.10, 0.12, 0.18, 0.97)
+	style.border_color = Color(0.85, 0.80, 0.55, 0.5)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 24
+	style.content_margin_right = 24
+	style.content_margin_top = 20
+	style.content_margin_bottom = 20
+	_phase_progress_panel.add_theme_stylebox_override("panel", style)
+	add_child(_phase_progress_panel)
+	_phase_progress_panel.z_index = 10
+	_phase_progress_panel.visible = false
+
+	var main_vbox := VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 12)
+	_phase_progress_panel.add_child(main_vbox)
+
+	# 右上の閉じるボタン
+	var close_btn := TextureButton.new()
+	var close_tex := load("res://assets/images/ui/icon_close.png")
+	close_btn.texture_normal = close_tex
+	close_btn.ignore_texture_size = true
+	close_btn.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	close_btn.custom_minimum_size = Vector2(28, 28)
+	close_btn.size = Vector2(28, 28)
+	close_btn.modulate = Color(0.7, 0.7, 0.75, 0.9)
+	close_btn.pressed.connect(_close_phase_progress)
+	_phase_progress_panel.add_child(close_btn)
+	close_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	close_btn.position = Vector2(-36, 8)
+
+	# 現在のフェーズ表示
+	_phase_current_label = Label.new()
+	_phase_current_label.add_theme_font_size_override("font_size", 22)
+	_phase_current_label.add_theme_color_override("font_color", Color(0.70, 0.75, 0.85))
+	_phase_current_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	main_vbox.add_child(_phase_current_label)
+
+	# 次のフェーズ名（大きくゴールド）
+	_phase_next_name_label = Label.new()
+	_phase_next_name_label.add_theme_font_size_override("font_size", 28)
+	_phase_next_name_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.45))
+	_phase_next_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	main_vbox.add_child(_phase_next_name_label)
+
+	# 区切り線
+	var sep := HSeparator.new()
+	sep.add_theme_constant_override("separation", 2)
+	sep.add_theme_color_override("separator_color", Color(0.35, 0.35, 0.45))
+	main_vbox.add_child(sep)
+
+	# 「昇格条件」小見出し
+	var cond_title := Label.new()
+	cond_title.text = "昇格条件"
+	cond_title.add_theme_font_size_override("font_size", 20)
+	cond_title.add_theme_color_override("font_color", Color(0.60, 0.63, 0.70))
+	main_vbox.add_child(cond_title)
+
+	# 各条件カード
+	_phase_progress_rows.clear()
+	_phase_progress_name_labels.clear()
+	_phase_progress_value_labels.clear()
+	_phase_progress_bars.clear()
+
+	var icons := ["📊", "👤", "👥", "💰"]
+
+	for i in range(4):
+		# 条件ごとの縦積みコンテナ
+		var card := VBoxContainer.new()
+		card.add_theme_constant_override("separation", 4)
+		main_vbox.add_child(card)
+		_phase_progress_rows.append(card)
+
+		# 上段: アイコン＋条件名 ← → 現在値/目標値
+		var top_row := HBoxContainer.new()
+		card.add_child(top_row)
+
+		var name_lbl := Label.new()
+		name_lbl.add_theme_font_size_override("font_size", 24)
+		name_lbl.add_theme_color_override("font_color", Color(0.90, 0.92, 0.95))
+		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		top_row.add_child(name_lbl)
+		_phase_progress_name_labels.append(name_lbl)
+
+		var val_lbl := Label.new()
+		val_lbl.add_theme_font_size_override("font_size", 24)
+		val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		top_row.add_child(val_lbl)
+		_phase_progress_value_labels.append(val_lbl)
+
+		# 下段: プログレスバー
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 20)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.min_value = 0.0
+		bar.max_value = 1.0
+		bar.show_percentage = false
+		var bg := StyleBoxFlat.new()
+		bg.bg_color = Color(0.18, 0.20, 0.26)
+		bg.set_corner_radius_all(6)
+		bar.add_theme_stylebox_override("background", bg)
+		var fill := StyleBoxFlat.new()
+		fill.bg_color = Color(0.40, 0.75, 0.45)
+		fill.set_corner_radius_all(6)
+		bar.add_theme_stylebox_override("fill", fill)
+		card.add_child(bar)
+		_phase_progress_bars.append(bar)
+
+	# アンロック報酬
+	_phase_unlock_label = Label.new()
+	_phase_unlock_label.add_theme_font_size_override("font_size", 22)
+	_phase_unlock_label.add_theme_color_override("font_color", Color(0.55, 0.90, 0.55))
+	_phase_unlock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_phase_unlock_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	main_vbox.add_child(_phase_unlock_label)
+
+
+func _toggle_phase_progress() -> void:
+	if _phase_progress_panel == null:
+		return
+	if _phase_progress_panel.visible:
+		_close_phase_progress()
+	else:
+		_open_phase_progress()
+
+
+func _open_phase_progress() -> void:
+	_update_phase_progress()
+	_phase_progress_overlay.visible = true
+	_phase_progress_panel.visible = true
+	# パネルサイズを確定させてからSafeArea内で中央配置
+	_phase_progress_panel.reset_size()
+	await get_tree().process_frame
+	var safe_rect: Rect2 = $SafeArea.get_rect()
+	var panel_w: float = safe_rect.size.x - 48
+	_phase_progress_panel.size.x = panel_w
+	var panel_size: Vector2 = _phase_progress_panel.size
+	_phase_progress_panel.position = Vector2(
+		safe_rect.position.x + (safe_rect.size.x - panel_size.x) / 2.0,
+		safe_rect.position.y + (safe_rect.size.y - panel_size.y) / 2.0
+	)
+
+
+func _close_phase_progress() -> void:
+	_phase_progress_panel.visible = false
+	_phase_progress_overlay.visible = false
+
+
+func _update_phase_progress() -> void:
+	if _phase_progress_panel == null:
+		return
+
+	# 最終フェーズならボタンも非表示
+	if phase_manager.current_phase >= phase_manager.PHASE_DATA.size() - 1:
+		_phase_info_btn.visible = false
+		_close_phase_progress()
+		return
+	_phase_info_btn.visible = true
+
+	var cur_data: Dictionary = phase_manager.get_phase_data()
+	var next_data: Dictionary = phase_manager.get_phase_data(phase_manager.current_phase + 1)
+
+	_phase_current_label.text = "現在: %s %s" % [cur_data.get("icon", ""), cur_data.get("name", "")]
+	_phase_next_name_label.text = "▶ %s %s へ昇格" % [next_data.get("icon", ""), next_data.get("name", "")]
+
+	# アンロック報酬
+	var unlocks: Array = next_data.get("unlocks", [])
+	if unlocks.size() > 0:
+		var action_labels := {
+			"develop": "🛠️ 開発",
+			"hire": "🤝 採用",
+			"marketing": "📣 マーケティング",
+			"fundraise": "💵 資金調達",
+			"team_care": "❤️ チームケア",
+		}
+		var names := []
+		for u in unlocks:
+			names.append(action_labels.get(u, u))
+		_phase_unlock_label.text = "🔓 解放: %s" % "、".join(names)
+		_phase_unlock_label.visible = true
+	else:
+		_phase_unlock_label.visible = false
+
+	var progress: Dictionary = phase_manager.get_progress(GameState)
+	var current_values := [GameState.revenue, GameState.users, GameState.team_size, GameState.total_raised]
+	var target_keys := ["mrr", "users", "team", "raised"]
+	var cond_names := ["📊 MRR（月次売上）", "👤 ユーザー数", "👥 チーム人数", "💰 累計調達額"]
+	var suffixes := ["万円", "人", "人", "万円"]
+
+	for i in range(4):
+		var target: int = next_data.get(target_keys[i], 0)
+		var current: int = current_values[i]
+		var prog: float = progress.get(target_keys[i], 0.0)
+
+		# 目標0はスキップ
+		if target <= 0:
+			_phase_progress_rows[i].visible = false
+			continue
+		_phase_progress_rows[i].visible = true
+
+		var done: bool = prog >= 1.0
+
+		# 条件名
+		var check := "✅" if done else ""
+		_phase_progress_name_labels[i].text = "%s %s" % [check, cond_names[i]] if done else cond_names[i]
+
+		# 現在値 / 目標値
+		var cur_str: String
+		var tgt_str: String
+		if suffixes[i] == "万円":
+			cur_str = _format_number_local(current) + "万円" if current < 10000 else _format_number_local(current)
+			tgt_str = _format_number_local(target) + "万円" if target < 10000 else _format_number_local(target)
+		else:
+			cur_str = "%d%s" % [current, suffixes[i]]
+			tgt_str = "%d%s" % [target, suffixes[i]]
+		_phase_progress_value_labels[i].text = "%s / %s" % [cur_str, tgt_str]
+
+		# 値ラベルの色
+		if done:
+			_phase_progress_value_labels[i].add_theme_color_override("font_color", Color(0.45, 0.92, 0.50))
+		else:
+			_phase_progress_value_labels[i].add_theme_color_override("font_color", Color(0.85, 0.87, 0.92))
+
+		# バー値
+		_phase_progress_bars[i].value = prog
+
+		# バー色
+		var fill_style: StyleBoxFlat = _phase_progress_bars[i].get_theme_stylebox("fill") as StyleBoxFlat
+		if fill_style:
+			if done:
+				fill_style.bg_color = Color(0.40, 0.88, 0.48)
+			elif prog >= 0.5:
+				fill_style.bg_color = Color(0.90, 0.78, 0.30)
+			else:
+				fill_style.bg_color = Color(0.45, 0.58, 0.75)

@@ -204,7 +204,7 @@ func apply_button_style(btn: Button, color: String = "blue") -> void:
 	btn.add_theme_color_override("font_disabled_color", Color(0.40, 0.42, 0.48))
 	# 色別の通常文字色
 	if color == "grey":
-		btn.add_theme_color_override("font_color", Color(0.88, 0.88, 0.92))
+		btn.add_theme_color_override("font_color", Color(0.25, 0.27, 0.32))
 	elif color == "yellow":
 		btn.add_theme_color_override("font_color", Color(0.15, 0.12, 0.05))
 

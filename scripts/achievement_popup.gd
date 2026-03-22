@@ -31,7 +31,7 @@ func show_list(achievements: Array[Dictionary]) -> void:
 	var title = Label.new()
 	title.text = "🏆 実績一覧"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color(1, 1, 1))
 	_vbox.add_child(title)
 
@@ -43,7 +43,7 @@ func show_list(achievements: Array[Dictionary]) -> void:
 	var count_label = Label.new()
 	count_label.text = "%d / %d 解除済み" % [unlocked_count, achievements.size()]
 	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	count_label.add_theme_font_size_override("font_size", 20)
+	count_label.add_theme_font_size_override("font_size", 24)
 	count_label.add_theme_color_override("font_color", Color(0.65, 0.68, 0.75))
 	_vbox.add_child(count_label)
 
@@ -57,7 +57,7 @@ func show_list(achievements: Array[Dictionary]) -> void:
 
 		var icon = Label.new()
 		icon.text = ach.get("icon", "?") if is_unlocked else "🔒"
-		icon.add_theme_font_size_override("font_size", 28)
+		icon.add_theme_font_size_override("font_size", 32)
 		hbox.add_child(icon)
 
 		var info_vbox = VBoxContainer.new()
@@ -65,14 +65,14 @@ func show_list(achievements: Array[Dictionary]) -> void:
 
 		var name_label = Label.new()
 		name_label.text = ach.get("name", "") if is_unlocked else "???"
-		name_label.add_theme_font_size_override("font_size", 22)
+		name_label.add_theme_font_size_override("font_size", 26)
 		var name_color = Color(1, 1, 1) if is_unlocked else Color(0.45, 0.48, 0.55)
 		name_label.add_theme_color_override("font_color", name_color)
 		info_vbox.add_child(name_label)
 
 		var desc_label = Label.new()
 		desc_label.text = ach.get("description", "") if is_unlocked else "条件を満たすと解放"
-		desc_label.add_theme_font_size_override("font_size", 16)
+		desc_label.add_theme_font_size_override("font_size", 20)
 		desc_label.add_theme_color_override("font_color", Color(0.55, 0.58, 0.65))
 		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		info_vbox.add_child(desc_label)
@@ -80,7 +80,7 @@ func show_list(achievements: Array[Dictionary]) -> void:
 		if is_unlocked:
 			var reward_label = Label.new()
 			reward_label.text = "🎁 " + ach.get("reward", "")
-			reward_label.add_theme_font_size_override("font_size", 16)
+			reward_label.add_theme_font_size_override("font_size", 20)
 			reward_label.add_theme_color_override("font_color", Color(0.90, 0.75, 0.30))
 			info_vbox.add_child(reward_label)
 
@@ -90,7 +90,7 @@ func show_list(achievements: Array[Dictionary]) -> void:
 	var close_btn = Button.new()
 	close_btn.text = "閉じる"
 	close_btn.custom_minimum_size = Vector2(0, 50)
-	close_btn.add_theme_font_size_override("font_size", 22)
+	close_btn.add_theme_font_size_override("font_size", 26)
 	close_btn.pressed.connect(func():
 		_panel.visible = false
 		_showing = false
@@ -112,27 +112,27 @@ func _show_next() -> void:
 	var icon = Label.new()
 	icon.text = ach.get("icon", "🏆")
 	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	icon.add_theme_font_size_override("font_size", 56)
+	icon.add_theme_font_size_override("font_size", 60)
 	_vbox.add_child(icon)
 
 	var title = Label.new()
 	title.text = "実績解除！"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
+	title.add_theme_font_size_override("font_size", 32)
 	title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.30))
 	_vbox.add_child(title)
 
 	var name_label = Label.new()
 	name_label.text = ach.get("name", "")
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 28)
 	name_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	_vbox.add_child(name_label)
 
 	var desc = Label.new()
 	desc.text = ach.get("description", "")
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	desc.add_theme_font_size_override("font_size", 18)
+	desc.add_theme_font_size_override("font_size", 22)
 	desc.add_theme_color_override("font_color", Color(0.65, 0.68, 0.75))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_vbox.add_child(desc)
@@ -140,7 +140,7 @@ func _show_next() -> void:
 	var reward = Label.new()
 	reward.text = "🎁 報酬: " + ach.get("reward", "")
 	reward.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	reward.add_theme_font_size_override("font_size", 20)
+	reward.add_theme_font_size_override("font_size", 24)
 	reward.add_theme_color_override("font_color", Color(0.90, 0.75, 0.30))
 	_vbox.add_child(reward)
 
@@ -148,7 +148,7 @@ func _show_next() -> void:
 	var close_btn = Button.new()
 	close_btn.text = "OK"
 	close_btn.custom_minimum_size = Vector2(0, 50)
-	close_btn.add_theme_font_size_override("font_size", 22)
+	close_btn.add_theme_font_size_override("font_size", 26)
 	close_btn.pressed.connect(func():
 		_panel.visible = false
 		_show_next())

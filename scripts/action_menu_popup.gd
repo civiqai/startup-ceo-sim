@@ -64,7 +64,7 @@ func update_fundraise_btn(cooldown: int) -> void:
 
 func update_hire_btn() -> void:
 	var current := TeamManager.members.size()
-	var max_m := TeamManager.MAX_MEMBERS
+	var max_m: int = TeamManager.get_max_members()
 	if current >= max_m:
 		_hire_btn.text = "👤 採用する（%d/%d 入替のみ）" % [current, max_m]
 	else:
@@ -96,6 +96,16 @@ func update_contract_state(gs) -> void:
 		_marketing_btn.disabled = false
 		_contract_btn.text = "🏗️ 受託開発"
 		_contract_btn.disabled = false
+
+
+## フェーズに応じたアクション制限（チュートリアル完了後に適用）
+func update_phase_state(current_phase: int) -> void:
+	# Phase 0: develop, hire, team_care, contract_work, marketing
+	# Phase 2: + fundraise
+	# マーケティングはフェーズ0から利用可能（チャネルごとにフェーズ制限あり）
+	if current_phase < 2:
+		_fundraise_btn.text = "💵 資金調達（🔒シリーズAで解放）"
+		_fundraise_btn.disabled = true
 
 
 ## チュートリアル中のボタン制限
@@ -193,7 +203,7 @@ func _create_action_btn(text: String, action: String, color: String = "blue") ->
 	var btn := Button.new()
 	btn.text = text
 	btn.custom_minimum_size = Vector2(0, 56)
-	btn.add_theme_font_size_override("font_size", 22)
+	btn.add_theme_font_size_override("font_size", 26)
 	btn.add_theme_color_override("font_color", COLOR_TEXT)
 	KenneyTheme.apply_button_style(btn, color)
 	btn.pressed.connect(_on_action_pressed.bind(action))

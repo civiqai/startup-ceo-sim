@@ -122,7 +122,7 @@ func _build_member_card(member_data: Dictionary, index: int) -> PanelContainer:
 	# アイコン
 	var icon_label := Label.new()
 	icon_label.text = icon
-	icon_label.add_theme_font_size_override("font_size", 36)
+	icon_label.add_theme_font_size_override("font_size", 40)
 	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	icon_label.custom_minimum_size = Vector2(48, 0)
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -139,7 +139,7 @@ func _build_member_card(member_data: Dictionary, index: int) -> PanelContainer:
 	# 名前 + 星
 	var name_label := Label.new()
 	name_label.text = "%s %s" % [member_name, stars]
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 28)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_vbox.add_child(name_label)
@@ -147,7 +147,7 @@ func _build_member_card(member_data: Dictionary, index: int) -> PanelContainer:
 	# スキル / 役職
 	var detail_label := Label.new()
 	detail_label.text = "%s / %s" % [skill_label_text, role_label_text]
-	detail_label.add_theme_font_size_override("font_size", 20)
+	detail_label.add_theme_font_size_override("font_size", 24)
 	detail_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	detail_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	text_vbox.add_child(detail_label)
@@ -155,7 +155,7 @@ func _build_member_card(member_data: Dictionary, index: int) -> PanelContainer:
 	# 右矢印（詳細へ）
 	var arrow_label := Label.new()
 	arrow_label.text = "＞"
-	arrow_label.add_theme_font_size_override("font_size", 24)
+	arrow_label.add_theme_font_size_override("font_size", 28)
 	arrow_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	arrow_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	arrow_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -206,7 +206,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "👥 チーム一覧"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE_GOLD)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
@@ -232,8 +232,7 @@ func _build_ui() -> void:
 	_close_button = Button.new()
 	_close_button.text = "閉じる"
 	_close_button.custom_minimum_size = Vector2(0, 56)
-	_close_button.add_theme_font_size_override("font_size", 24)
-	_close_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_close_button.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_close_button, "grey")
 	_close_button.pressed.connect(_on_close_pressed)
 	vbox.add_child(_close_button)

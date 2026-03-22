@@ -141,6 +141,7 @@ func _serialize() -> Dictionary:
 		"fundraise_cooldown": GameState.fundraise_cooldown,
 		"total_raised": GameState.total_raised,
 		"fundraise_count": GameState.fundraise_count,
+		"marketing_channel_counts": GameState.marketing_channel_counts.duplicate(),
 		"equity_share": GameState.equity_share,
 		"contract_work_remaining": GameState.contract_work_remaining,
 		"contract_work_name": GameState.contract_work_name,
@@ -166,6 +167,8 @@ func _deserialize(data: Dictionary) -> bool:
 	GameState.fundraise_cooldown = int(data.get("fundraise_cooldown", 0))
 	GameState.total_raised = int(data.get("total_raised", 0))
 	GameState.fundraise_count = int(data.get("fundraise_count", 0))
+	var loaded_counts = data.get("marketing_channel_counts", {})
+	GameState.marketing_channel_counts = loaded_counts if loaded_counts is Dictionary else {}
 	GameState.equity_share = float(data.get("equity_share", 100.0))
 	GameState.contract_work_remaining = int(data.get("contract_work_remaining", 0))
 	GameState.contract_work_name = str(data.get("contract_work_name", ""))

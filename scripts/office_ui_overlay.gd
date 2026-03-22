@@ -14,8 +14,8 @@ const GAUGE_BRAND := Color(0.80, 0.45, 0.65)
 const GAUGE_MORALE := Color(0.50, 0.80, 0.50)
 
 const SCREEN_W := 720.0
-const TOP_BAR_H := 28.0
-const BOTTOM_MAX_H := 320.0
+const TOP_BAR_H := 36.0
+const BOTTOM_MAX_H := 420.0
 
 # プロダクトカードスワイプ用
 var _product_page: int = 0
@@ -84,14 +84,14 @@ func _build_top_bar() -> void:
 	_top_office_label = Label.new()
 	_top_office_label.name = "OfficeLabel"
 	_top_office_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_top_office_label.add_theme_font_size_override("font_size", 16)
+	_top_office_label.add_theme_font_size_override("font_size", 26)
 	_top_office_label.add_theme_color_override("font_color", Color(0.92, 0.94, 0.97))
 	_top_office_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	_top_runway_label = Label.new()
 	_top_runway_label.name = "RunwayLabel"
 	_top_runway_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_top_runway_label.add_theme_font_size_override("font_size", 14)
+	_top_runway_label.add_theme_font_size_override("font_size", 24)
 	_top_runway_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	hbox.add_child(_top_office_label)
@@ -112,10 +112,10 @@ func _build_bottom_section() -> void:
 	# 半透明ダーク背景
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.05, 0.06, 0.10, 0.75)
-	style.content_margin_left = 8.0
-	style.content_margin_right = 8.0
-	style.content_margin_top = 6.0
-	style.content_margin_bottom = 6.0
+	style.content_margin_left = 14.0
+	style.content_margin_right = 14.0
+	style.content_margin_top = 14.0
+	style.content_margin_bottom = 14.0
 	style.corner_radius_top_left = 8
 	style.corner_radius_top_right = 8
 	_bottom_panel.add_theme_stylebox_override("panel", style)
@@ -135,7 +135,7 @@ func _build_bottom_section() -> void:
 	_bottom_vbox.name = "ContentVBox"
 	_bottom_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_bottom_vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_bottom_vbox.add_theme_constant_override("separation", 6)
+	_bottom_vbox.add_theme_constant_override("separation", 16)
 
 	# プロダクトカードエリア
 	_build_product_area()
@@ -180,7 +180,7 @@ func _build_company_gauges() -> void:
 	_gauges_container = VBoxContainer.new()
 	_gauges_container.name = "CompanyGauges"
 	_gauges_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_gauges_container.add_theme_constant_override("separation", 4)
+	_gauges_container.add_theme_constant_override("separation", 12)
 	_bottom_vbox.add_child(_gauges_container)
 
 
@@ -188,10 +188,10 @@ func _build_valuation_row() -> void:
 	var vbox := VBoxContainer.new()
 	vbox.name = "ValuationSection"
 	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	vbox.add_theme_constant_override("separation", 2)
+	vbox.add_theme_constant_override("separation", 10)
 
 	_valuation_label = Label.new()
-	_valuation_label.add_theme_font_size_override("font_size", 18)
+	_valuation_label.add_theme_font_size_override("font_size", 32)
 	_valuation_label.add_theme_color_override("font_color", Color(0.50, 0.85, 0.80))
 	_valuation_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -200,12 +200,12 @@ func _build_valuation_row() -> void:
 	hbox.add_theme_constant_override("separation", 16)
 
 	_market_share_label = Label.new()
-	_market_share_label.add_theme_font_size_override("font_size", 18)
+	_market_share_label.add_theme_font_size_override("font_size", 32)
 	_market_share_label.add_theme_color_override("font_color", Color(0.75, 0.70, 0.50))
 	_market_share_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	_equity_label = Label.new()
-	_equity_label.add_theme_font_size_override("font_size", 18)
+	_equity_label.add_theme_font_size_override("font_size", 32)
 	_equity_label.add_theme_color_override("font_color", Color(0.80, 0.75, 0.40))
 	_equity_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -300,7 +300,7 @@ func _update_product_cards() -> void:
 func _show_no_product_message() -> void:
 	var label := Label.new()
 	label.text = "📦 プロダクトなし（PMを採用して立ち上げましょう）"
-	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_font_size_override("font_size", 30)
 	label.add_theme_color_override("font_color", Color(0.50, 0.55, 0.65))
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_product_cards_container.add_child(label)
@@ -338,7 +338,7 @@ func _create_product_card(product: Dictionary, pm) -> PanelContainer:
 	var pname = product.get("name", "プロダクト")
 	var title_label := Label.new()
 	title_label.text = "%s %s" % [icon, pname]
-	title_label.add_theme_font_size_override("font_size", 18)
+	title_label.add_theme_font_size_override("font_size", 28)
 	title_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.40))
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	vbox.add_child(title_label)
@@ -369,21 +369,21 @@ func _create_product_card(product: Dictionary, pm) -> PanelContainer:
 
 	var users_label := Label.new()
 	users_label.text = "📱 %s人" % _format_number(product.get("users", 0))
-	users_label.add_theme_font_size_override("font_size", 16)
+	users_label.add_theme_font_size_override("font_size", 26)
 	users_label.add_theme_color_override("font_color", Color(0.75, 0.60, 0.88))
 	users_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_vbox.add_child(users_label)
 
 	var revenue_label := Label.new()
 	revenue_label.text = "💹 %s万/月" % _format_number(_calc_product_revenue(product))
-	revenue_label.add_theme_font_size_override("font_size", 16)
+	revenue_label.add_theme_font_size_override("font_size", 20)
 	revenue_label.add_theme_color_override("font_color", Color(0.55, 0.80, 0.55))
 	revenue_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_vbox.add_child(revenue_label)
 
 	var debt_label := Label.new()
 	debt_label.text = "🔧 負債: %d" % product.get("tech_debt", 0)
-	debt_label.add_theme_font_size_override("font_size", 16)
+	debt_label.add_theme_font_size_override("font_size", 20)
 	debt_label.add_theme_color_override("font_color", Color(0.80, 0.50, 0.40))
 	debt_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_vbox.add_child(debt_label)
@@ -398,14 +398,14 @@ func _create_product_card(product: Dictionary, pm) -> PanelContainer:
 func _create_mini_gauge(label_text: String, value: int, max_value: int, fill_color: Color) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.custom_minimum_size = Vector2(0, 18)
+	row.custom_minimum_size = Vector2(0, 24)
 	row.add_theme_constant_override("separation", 4)
 
 	# ラベル
 	var label := Label.new()
 	label.text = label_text
-	label.custom_minimum_size = Vector2(68, 0)
-	label.add_theme_font_size_override("font_size", 13)
+	label.custom_minimum_size = Vector2(80, 0)
+	label.add_theme_font_size_override("font_size", 22)
 	label.add_theme_color_override("font_color", Color(0.70, 0.72, 0.78))
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(label)
@@ -437,9 +437,9 @@ func _create_mini_gauge(label_text: String, value: int, max_value: int, fill_col
 	# 数値
 	var val_label := Label.new()
 	val_label.text = "%d" % value
-	val_label.custom_minimum_size = Vector2(32, 0)
+	val_label.custom_minimum_size = Vector2(40, 0)
 	val_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	val_label.add_theme_font_size_override("font_size", 13)
+	val_label.add_theme_font_size_override("font_size", 22)
 	val_label.add_theme_color_override("font_color", fill_color)
 	val_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(val_label)
@@ -450,20 +450,20 @@ func _create_mini_gauge(label_text: String, value: int, max_value: int, fill_col
 func _create_company_gauge(label_text: String, value: int, max_value: int, fill_color: Color) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.custom_minimum_size = Vector2(0, 22)
-	row.add_theme_constant_override("separation", 6)
+	row.custom_minimum_size = Vector2(0, 36)
+	row.add_theme_constant_override("separation", 8)
 
 	var label := Label.new()
 	label.text = label_text
-	label.custom_minimum_size = Vector2(110, 0)
-	label.add_theme_font_size_override("font_size", 16)
+	label.custom_minimum_size = Vector2(130, 0)
+	label.add_theme_font_size_override("font_size", 30)
 	label.add_theme_color_override("font_color", Color(0.70, 0.72, 0.78))
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(label)
 
 	var bar_container := Control.new()
 	bar_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar_container.custom_minimum_size = Vector2(0, 14)
+	bar_container.custom_minimum_size = Vector2(0, 20)
 	bar_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	var bar_bg := ColorRect.new()
@@ -486,9 +486,9 @@ func _create_company_gauge(label_text: String, value: int, max_value: int, fill_
 
 	var val_label := Label.new()
 	val_label.text = "%d" % value
-	val_label.custom_minimum_size = Vector2(36, 0)
+	val_label.custom_minimum_size = Vector2(48, 0)
 	val_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	val_label.add_theme_font_size_override("font_size", 16)
+	val_label.add_theme_font_size_override("font_size", 30)
 	val_label.add_theme_color_override("font_color", fill_color)
 	val_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(val_label)

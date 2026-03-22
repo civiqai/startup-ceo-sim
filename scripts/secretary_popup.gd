@@ -443,13 +443,13 @@ func _build_ui() -> void:
 
 	_icon_label = Label.new()
 	_icon_label.text = "👩‍💼"
-	_icon_label.add_theme_font_size_override("font_size", 48)
+	_icon_label.add_theme_font_size_override("font_size", 52)
 	_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	left_vbox.add_child(_icon_label)
 
 	_name_label = Label.new()
 	_name_label.text = "秘書・あかり"
-	_name_label.add_theme_font_size_override("font_size", 14)
+	_name_label.add_theme_font_size_override("font_size", 18)
 	_name_label.add_theme_color_override("font_color", COLOR_NAME)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -464,7 +464,7 @@ func _build_ui() -> void:
 	# テキストラベル
 	_text_label = Label.new()
 	_text_label.text = ""
-	_text_label.add_theme_font_size_override("font_size", 22)
+	_text_label.add_theme_font_size_override("font_size", 26)
 	_text_label.add_theme_color_override("font_color", COLOR_TEXT)
 	_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -480,7 +480,7 @@ func _build_ui() -> void:
 	# 「次へ」ボタン（Kenney UIスタイル）
 	_next_btn = Button.new()
 	_next_btn.text = "次へ ▶"
-	_next_btn.add_theme_font_size_override("font_size", 20)
+	_next_btn.add_theme_font_size_override("font_size", 24)
 	_next_btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	KenneyTheme.apply_button_style(_next_btn, "blue")
 	_next_btn.pressed.connect(_on_next_pressed)
@@ -489,7 +489,7 @@ func _build_ui() -> void:
 	# 「スキップ」ボタン（チュートリアル用、右上に配置）
 	_skip_btn = Button.new()
 	_skip_btn.text = "スキップ"
-	_skip_btn.add_theme_font_size_override("font_size", 16)
+	_skip_btn.add_theme_font_size_override("font_size", 20)
 	_skip_btn.add_theme_color_override("font_color", COLOR_SKIP_TEXT)
 	_skip_btn.flat = true
 	_skip_btn.visible = false

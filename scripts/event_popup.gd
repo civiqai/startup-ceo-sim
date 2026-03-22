@@ -62,7 +62,7 @@ func show_event(event_data: Dictionary) -> void:
 			btn.text = choices[i].get("label", "選択肢%d" % (i + 1))
 			btn.custom_minimum_size = Vector2(0, 64)
 			btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			btn.add_theme_font_size_override("font_size", 24)
+			btn.add_theme_font_size_override("font_size", 28)
 			btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 			var idx = i
 			btn.pressed.connect(func(): _on_choice_pressed(idx))
@@ -164,7 +164,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.40, 1.0))
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_vbox.add_child(_title_label)
@@ -177,14 +177,14 @@ func _build_ui() -> void:
 	# 説明文
 	_desc_label = Label.new()
 	_desc_label.add_theme_color_override("font_color", Color(0.85, 0.87, 0.92, 1.0))
-	_desc_label.add_theme_font_size_override("font_size", 24)
+	_desc_label.add_theme_font_size_override("font_size", 28)
 	_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_vbox.add_child(_desc_label)
 
 	# 効果テキスト
 	_effect_label = Label.new()
 	_effect_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70, 1.0))
-	_effect_label.add_theme_font_size_override("font_size", 24)
+	_effect_label.add_theme_font_size_override("font_size", 28)
 	_effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_vbox.add_child(_effect_label)
@@ -199,6 +199,6 @@ func _build_ui() -> void:
 	_ok_button.text = "OK"
 	_ok_button.custom_minimum_size = Vector2(0, 60)
 	_ok_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
-	_ok_button.add_theme_font_size_override("font_size", 26)
+	_ok_button.add_theme_font_size_override("font_size", 30)
 	_ok_button.pressed.connect(_on_ok_pressed)
 	_vbox.add_child(_ok_button)

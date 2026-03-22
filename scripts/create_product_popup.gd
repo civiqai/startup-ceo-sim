@@ -152,14 +152,14 @@ func _create_type_card(type_id: String, type_data: Dictionary) -> PanelContainer
 	# タイプ名 + アイコン
 	var title := Label.new()
 	title.text = "%s %s" % [type_data.get("icon", ""), type_data.get("name", "")]
-	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_font_size_override("font_size", 34)
 	title.add_theme_color_override("font_color", Color(1, 1, 1))
 	vbox.add_child(title)
 
 	# 説明
 	var desc := Label.new()
 	desc.text = type_data.get("description", "")
-	desc.add_theme_font_size_override("font_size", 20)
+	desc.add_theme_font_size_override("font_size", 24)
 	desc.add_theme_color_override("font_color", Color(0.75, 0.75, 0.85))
 	vbox.add_child(desc)
 
@@ -167,7 +167,7 @@ func _create_type_card(type_id: String, type_data: Dictionary) -> PanelContainer
 	var cost_label := Label.new()
 	cost_label.text = "初期費用: %d万円 / 月額メンテ: %d万円" % [
 		type_data.get("init_cost", 0), type_data.get("monthly_maintenance", 0)]
-	cost_label.add_theme_font_size_override("font_size", 18)
+	cost_label.add_theme_font_size_override("font_size", 22)
 	cost_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.40))
 	vbox.add_child(cost_label)
 
@@ -175,7 +175,7 @@ func _create_type_card(type_id: String, type_data: Dictionary) -> PanelContainer
 	var btn := Button.new()
 	btn.text = "%s %sを選ぶ" % [type_data.get("icon", ""), type_data.get("name", "")]
 	btn.custom_minimum_size = Vector2(0, 56)
-	btn.add_theme_font_size_override("font_size", 24)
+	btn.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(btn, "blue")
 	# 資金不足チェック
 	if GameState.cash < type_data.get("init_cost", 0):
@@ -214,7 +214,7 @@ func _create_theme_button(theme: Dictionary) -> Button:
 	var btn := Button.new()
 	btn.text = "%s %s  %s" % [theme.get("icon", ""), theme.get("name", ""), bonus_text]
 	btn.custom_minimum_size = Vector2(0, 64)
-	btn.add_theme_font_size_override("font_size", 24)
+	btn.add_theme_font_size_override("font_size", 28)
 	btn.add_theme_color_override("font_color", Color(1, 1, 1))
 	KenneyTheme.apply_button_style(btn, "blue")
 	btn.pressed.connect(_on_theme_selected.bind(theme))
@@ -249,7 +249,7 @@ func _create_stack_button(stack: Dictionary) -> Button:
 		stack.get("icon", ""), stack.get("name", ""),
 		stack.get("description", ""), bonus_text]
 	btn.custom_minimum_size = Vector2(0, 72)
-	btn.add_theme_font_size_override("font_size", 22)
+	btn.add_theme_font_size_override("font_size", 26)
 	btn.add_theme_color_override("font_color", Color(1, 1, 1))
 	KenneyTheme.apply_button_style(btn, "blue")
 	btn.pressed.connect(_on_stack_selected.bind(stack))
@@ -278,7 +278,7 @@ func _render_point_allocation() -> void:
 	if not bonus_preview.is_empty():
 		var bonus_label := Label.new()
 		bonus_label.text = "テーマ・技術スタックボーナス: %s" % _format_bonus(bonus_preview)
-		bonus_label.add_theme_font_size_override("font_size", 18)
+		bonus_label.add_theme_font_size_override("font_size", 22)
 		bonus_label.add_theme_color_override("font_color", Color(0.5, 0.9, 0.5))
 		bonus_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		_content_vbox.add_child(bonus_label)
@@ -286,7 +286,7 @@ func _render_point_allocation() -> void:
 	# 残りポイント表示
 	_remaining_label = Label.new()
 	_remaining_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_remaining_label.add_theme_font_size_override("font_size", 26)
+	_remaining_label.add_theme_font_size_override("font_size", 30)
 	_remaining_label.add_theme_color_override("font_color", Color(1, 0.9, 0.4))
 	_content_vbox.add_child(_remaining_label)
 
@@ -313,7 +313,7 @@ func _render_point_allocation() -> void:
 	back_btn.text = "◀ 戻る"
 	back_btn.custom_minimum_size = Vector2(0, 56)
 	back_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	back_btn.add_theme_font_size_override("font_size", 24)
+	back_btn.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(back_btn, "grey")
 	back_btn.pressed.connect(_on_back)
 	btn_hbox.add_child(back_btn)
@@ -322,7 +322,7 @@ func _render_point_allocation() -> void:
 	_create_btn.text = "📦 作成する"
 	_create_btn.custom_minimum_size = Vector2(0, 56)
 	_create_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_create_btn.add_theme_font_size_override("font_size", 24)
+	_create_btn.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_create_btn, "blue")
 	_create_btn.pressed.connect(_on_create_pressed)
 	btn_hbox.add_child(_create_btn)
@@ -337,7 +337,7 @@ func _create_point_row(key: String, label_text: String, bar_color: Color) -> HBo
 	var label := Label.new()
 	label.text = label_text
 	label.custom_minimum_size = Vector2(140, 0)
-	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_font_size_override("font_size", 26)
 	label.add_theme_color_override("font_color", Color(1, 1, 1))
 	row.add_child(label)
 
@@ -345,7 +345,7 @@ func _create_point_row(key: String, label_text: String, bar_color: Color) -> HBo
 	var minus_btn := Button.new()
 	minus_btn.text = "−"
 	minus_btn.custom_minimum_size = Vector2(48, 48)
-	minus_btn.add_theme_font_size_override("font_size", 26)
+	minus_btn.add_theme_font_size_override("font_size", 30)
 	KenneyTheme.apply_button_style(minus_btn, "red")
 	minus_btn.pressed.connect(_on_point_change.bind(key, -1))
 	row.add_child(minus_btn)
@@ -374,7 +374,7 @@ func _create_point_row(key: String, label_text: String, bar_color: Color) -> HBo
 	var value_label := Label.new()
 	value_label.custom_minimum_size = Vector2(40, 0)
 	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	value_label.add_theme_font_size_override("font_size", 24)
+	value_label.add_theme_font_size_override("font_size", 28)
 	value_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	row.add_child(value_label)
 	_point_labels[key] = value_label
@@ -383,7 +383,7 @@ func _create_point_row(key: String, label_text: String, bar_color: Color) -> HBo
 	var plus_btn := Button.new()
 	plus_btn.text = "＋"
 	plus_btn.custom_minimum_size = Vector2(48, 48)
-	plus_btn.add_theme_font_size_override("font_size", 26)
+	plus_btn.add_theme_font_size_override("font_size", 30)
 	KenneyTheme.apply_button_style(plus_btn, "green")
 	plus_btn.pressed.connect(_on_point_change.bind(key, 1))
 	row.add_child(plus_btn)
@@ -457,14 +457,14 @@ func _add_step_header(title: String, subtitle: String) -> void:
 	var title_label := Label.new()
 	title_label.text = title
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 30)
+	title_label.add_theme_font_size_override("font_size", 34)
 	title_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.40))
 	_content_vbox.add_child(title_label)
 
 	var sub_label := Label.new()
 	sub_label.text = subtitle
 	sub_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	sub_label.add_theme_font_size_override("font_size", 20)
+	sub_label.add_theme_font_size_override("font_size", 24)
 	sub_label.add_theme_color_override("font_color", Color(0.70, 0.72, 0.80))
 	sub_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_content_vbox.add_child(sub_label)
@@ -490,7 +490,7 @@ func _add_selection_preview() -> void:
 
 	var preview := Label.new()
 	preview.text = "選択中: " + " > ".join(parts)
-	preview.add_theme_font_size_override("font_size", 18)
+	preview.add_theme_font_size_override("font_size", 22)
 	preview.add_theme_color_override("font_color", Color(0.5, 0.80, 1.0))
 	preview.autowrap_mode = TextServer.AUTOWRAP_WORD
 	_content_vbox.add_child(preview)
@@ -500,7 +500,7 @@ func _add_cancel_button() -> void:
 	var btn := Button.new()
 	btn.text = "✕ キャンセル"
 	btn.custom_minimum_size = Vector2(0, 56)
-	btn.add_theme_font_size_override("font_size", 24)
+	btn.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(btn, "grey")
 	btn.pressed.connect(_on_cancel)
 	_content_vbox.add_child(btn)
@@ -510,7 +510,7 @@ func _add_back_button() -> void:
 	var btn := Button.new()
 	btn.text = "◀ 戻る"
 	btn.custom_minimum_size = Vector2(0, 56)
-	btn.add_theme_font_size_override("font_size", 24)
+	btn.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(btn, "grey")
 	btn.pressed.connect(_on_back)
 	_content_vbox.add_child(btn)

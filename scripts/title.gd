@@ -20,7 +20,7 @@ func _ready() -> void:
 	continue_btn.text = "つづきから"
 	continue_btn.custom_minimum_size = Vector2(400, 60)
 	continue_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	continue_btn.add_theme_font_size_override("font_size", 26)
+	continue_btn.add_theme_font_size_override("font_size", 30)
 	continue_btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	KenneyTheme.apply_button_style(continue_btn, "blue")
 
@@ -70,7 +70,7 @@ func _show_difficulty_select() -> void:
 	var title_label = Label.new()
 	title_label.text = "難易度を選択"
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_label.add_theme_font_size_override("font_size", 32)
+	title_label.add_theme_font_size_override("font_size", 36)
 	title_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	vbox.add_child(title_label)
 
@@ -82,7 +82,7 @@ func _show_difficulty_select() -> void:
 		var btn = Button.new()
 		btn.text = "%s %s\n%s" % [diff.get("icon", ""), diff.get("name", ""), diff.get("description", "")]
 		btn.custom_minimum_size = Vector2(500, 100)
-		btn.add_theme_font_size_override("font_size", 26)
+		btn.add_theme_font_size_override("font_size", 30)
 		KenneyTheme.apply_button_style(btn, btn_colors.get(diff_id, "blue"))
 		var did = diff_id
 		btn.pressed.connect(func():
@@ -94,7 +94,7 @@ func _show_difficulty_select() -> void:
 	var close_btn = Button.new()
 	close_btn.text = "戻る"
 	close_btn.custom_minimum_size = Vector2(500, 70)
-	close_btn.add_theme_font_size_override("font_size", 24)
+	close_btn.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(close_btn, "grey")
 	close_btn.pressed.connect(func():
 		overlay.queue_free())

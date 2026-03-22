@@ -161,7 +161,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 
 	var icon_label := Label.new()
 	icon_label.text = zone_icon
-	icon_label.add_theme_font_size_override("font_size", 32)
+	icon_label.add_theme_font_size_override("font_size", 36)
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	icon_label.custom_minimum_size = Vector2(48, 48)
@@ -182,7 +182,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 
 	var name_label := Label.new()
 	name_label.text = zone_name
-	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.add_theme_font_size_override("font_size", 24)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE if not is_locked else COLOR_LOCKED_TEXT)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.clip_text = true
@@ -190,7 +190,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 
 	var cost_label := Label.new()
 	cost_label.text = "%d万円" % zone_cost
-	cost_label.add_theme_font_size_override("font_size", 18)
+	cost_label.add_theme_font_size_override("font_size", 22)
 	if is_locked:
 		cost_label.add_theme_color_override("font_color", COLOR_LOCKED_TEXT)
 	elif is_purchased:
@@ -206,7 +206,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 	if effects_text != "":
 		var effects_label := Label.new()
 		effects_label.text = effects_text
-		effects_label.add_theme_font_size_override("font_size", 16)
+		effects_label.add_theme_font_size_override("font_size", 20)
 		effects_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY if not is_locked else COLOR_LOCKED_TEXT)
 		effects_label.clip_text = true
 		info_vbox.add_child(effects_label)
@@ -215,7 +215,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 	if zone_desc != "":
 		var desc_label := Label.new()
 		desc_label.text = zone_desc
-		desc_label.add_theme_font_size_override("font_size", 14)
+		desc_label.add_theme_font_size_override("font_size", 18)
 		desc_label.add_theme_color_override("font_color", Color(0.50, 0.52, 0.58) if not is_locked else COLOR_LOCKED_TEXT)
 		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info_vbox.add_child(desc_label)
@@ -224,7 +224,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 	if size_bonus != Vector2i.ZERO:
 		var size_label := Label.new()
 		size_label.text = "\U0001F4D0 部屋拡張: +%dx%d タイル" % [size_bonus.x, size_bonus.y]
-		size_label.add_theme_font_size_override("font_size", 14)
+		size_label.add_theme_font_size_override("font_size", 18)
 		size_label.add_theme_color_override("font_color", Color(0.60, 0.75, 0.90) if not is_locked else COLOR_LOCKED_TEXT)
 		info_vbox.add_child(size_label)
 
@@ -232,7 +232,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 	if is_purchased:
 		var purchased_label := Label.new()
 		purchased_label.text = "\u2705 購入済み"
-		purchased_label.add_theme_font_size_override("font_size", 18)
+		purchased_label.add_theme_font_size_override("font_size", 22)
 		purchased_label.add_theme_color_override("font_color", COLOR_PURCHASED)
 		purchased_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		outer_vbox.add_child(purchased_label)
@@ -240,7 +240,7 @@ func _build_zone_card(zone_id: String) -> PanelContainer:
 		var lock_label := Label.new()
 		var phase_name: String = PHASE_NAMES.get(required_phase, "Phase %d" % required_phase)
 		lock_label.text = "\U0001F512 %sで解放" % phase_name
-		lock_label.add_theme_font_size_override("font_size", 16)
+		lock_label.add_theme_font_size_override("font_size", 20)
 		lock_label.add_theme_color_override("font_color", COLOR_LOCKED_TEXT)
 		lock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		outer_vbox.add_child(lock_label)
@@ -270,7 +270,7 @@ func _create_buy_button(zone_id: String, can_afford: bool, cost: int) -> Button:
 	var btn := Button.new()
 	btn.text = "購入する (%d万円)" % cost
 	btn.custom_minimum_size = Vector2(0, 44)
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_font_size_override("font_size", 22)
 	btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE if can_afford else COLOR_LOCKED_TEXT)
 	btn.add_theme_stylebox_override("normal", btn_style)
 	btn.add_theme_stylebox_override("hover", btn_hover)
@@ -334,7 +334,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	# タイトル
 	var title := Label.new()
 	title.text = "購入確認"
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", COLOR_TITLE)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
@@ -346,7 +346,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	# ゾーン名 + アイコン
 	var name_label := Label.new()
 	name_label.text = "%s %s" % [zone_icon, zone_name]
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 28)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(name_label)
@@ -355,7 +355,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	if zone_desc != "":
 		var desc_label := Label.new()
 		desc_label.text = zone_desc
-		desc_label.add_theme_font_size_override("font_size", 18)
+		desc_label.add_theme_font_size_override("font_size", 22)
 		desc_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -381,7 +381,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 
 		var eff_title := Label.new()
 		eff_title.text = "効果"
-		eff_title.add_theme_font_size_override("font_size", 18)
+		eff_title.add_theme_font_size_override("font_size", 22)
 		eff_title.add_theme_color_override("font_color", COLOR_ACCENT)
 		eff_vbox.add_child(eff_title)
 
@@ -392,7 +392,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 			var sign: String = "+" if value > 0 else ""
 			var eff_label := Label.new()
 			eff_label.text = "%s %s: %s%s" % [icon_str, display_name, sign, str(value)]
-			eff_label.add_theme_font_size_override("font_size", 18)
+			eff_label.add_theme_font_size_override("font_size", 22)
 			eff_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 			eff_vbox.add_child(eff_label)
 
@@ -403,7 +403,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	if size_bonus != Vector2i.ZERO:
 		var size_label := Label.new()
 		size_label.text = "\U0001F4D0 部屋拡張: +%dx%d タイル" % [size_bonus.x, size_bonus.y]
-		size_label.add_theme_font_size_override("font_size", 18)
+		size_label.add_theme_font_size_override("font_size", 22)
 		size_label.add_theme_color_override("font_color", Color(0.60, 0.75, 0.90))
 		size_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		vbox.add_child(size_label)
@@ -411,7 +411,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	# コスト表示
 	var cost_info := Label.new()
 	cost_info.text = "\U0001F4B0 %d万円 \u2192 残り %d万円" % [zone_cost, GameState.cash - zone_cost]
-	cost_info.add_theme_font_size_override("font_size", 20)
+	cost_info.add_theme_font_size_override("font_size", 24)
 	cost_info.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70))
 	cost_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(cost_info)
@@ -425,7 +425,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	var buy_btn := Button.new()
 	buy_btn.text = "購入する (%d万円)" % zone_cost
 	buy_btn.custom_minimum_size = Vector2(280, 52)
-	buy_btn.add_theme_font_size_override("font_size", 20)
+	buy_btn.add_theme_font_size_override("font_size", 24)
 	buy_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	KenneyTheme.apply_button_style(buy_btn, "green")
 	var zid = zone_id
@@ -438,8 +438,7 @@ func _show_purchase_confirm(zone_id: String) -> void:
 	var cancel_btn := Button.new()
 	cancel_btn.text = "キャンセル"
 	cancel_btn.custom_minimum_size = Vector2(180, 52)
-	cancel_btn.add_theme_font_size_override("font_size", 20)
-	cancel_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	cancel_btn.add_theme_font_size_override("font_size", 24)
 	KenneyTheme.apply_button_style(cancel_btn, "grey")
 	cancel_btn.pressed.connect(func():
 		AudioManager.play_sfx("click")
@@ -558,7 +557,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "\U0001F3D7\uFE0F オフィス拡張"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main_vbox.add_child(_title_label)
@@ -566,7 +565,7 @@ func _build_ui() -> void:
 	# 資金表示
 	_cash_label = Label.new()
 	_cash_label.text = "\U0001F4B0 0万円"
-	_cash_label.add_theme_font_size_override("font_size", 22)
+	_cash_label.add_theme_font_size_override("font_size", 26)
 	_cash_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70))
 	_cash_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main_vbox.add_child(_cash_label)
@@ -574,7 +573,7 @@ func _build_ui() -> void:
 	# オフィス情報
 	_info_label = Label.new()
 	_info_label.text = ""
-	_info_label.add_theme_font_size_override("font_size", 16)
+	_info_label.add_theme_font_size_override("font_size", 20)
 	_info_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -600,8 +599,7 @@ func _build_ui() -> void:
 	_close_button = Button.new()
 	_close_button.text = "閉じる"
 	_close_button.custom_minimum_size = Vector2(0, 56)
-	_close_button.add_theme_font_size_override("font_size", 24)
-	_close_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_close_button.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_close_button, "grey")
 	_close_button.pressed.connect(func():
 		AudioManager.play_sfx("click")

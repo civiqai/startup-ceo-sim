@@ -8,6 +8,7 @@ signal cancelled
 const FundraiseTypes = preload("res://scripts/fundraise_types.gd")
 
 var _is_open := false
+var _is_emergency := false
 var _panel_root: Control
 var _overlay: ColorRect
 var _cards_container: VBoxContainer
@@ -43,18 +44,34 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 
-func show_selection() -> void:
+func show_selection(emergency: bool = false) -> void:
+	_is_emergency = emergency
 	_rebuild_cards()
 	_update_info()
+	if _is_emergency:
+		_title_label.text = "⚠️ 緊急資金調達"
+		_title_label.add_theme_color_override("font_color", Color(0.90, 0.40, 0.35))
+		_cancel_button.text = "調達しない（倒産）"
+		KenneyTheme.apply_button_style(_cancel_button, "red")
+	else:
+		_title_label.text = "💵 資金調達"
+		_title_label.add_theme_color_override("font_color", COLOR_TITLE_GOLD)
+		_cancel_button.text = "戻る"
+		KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_panel_root.visible = true
 	_is_open = true
 
 
 func _update_info() -> void:
-	var amount_text := "調達可能額: %d万円" % GameState.max_fundraise_amount
+	var amount_text := ""
+	if _is_emergency:
+		amount_text = "⚠️ 資金が不足しています！資金調達方法を選んでください。\n"
+	amount_text += "調達可能額: %d万円" % GameState.max_fundraise_amount
 	if GameState.fundraise_cooldown > 0:
 		amount_text += "\n⚠ クールダウン中: あと%dヶ月" % GameState.fundraise_cooldown
 		_info_label.add_theme_color_override("font_color", COLOR_RISK_MEDIUM)
+	elif _is_emergency:
+		_info_label.add_theme_color_override("font_color", COLOR_RISK_HIGH)
 	else:
 		_info_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70))
 	_info_label.text = amount_text
@@ -114,7 +131,7 @@ func _build_card(type_data: Dictionary) -> PanelContainer:
 	# アイコン
 	var icon_label := Label.new()
 	icon_label.text = icon
-	icon_label.add_theme_font_size_override("font_size", 36)
+	icon_label.add_theme_font_size_override("font_size", 40)
 	icon_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	icon_label.custom_minimum_size = Vector2(48, 0)
 	icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -129,14 +146,14 @@ func _build_card(type_data: Dictionary) -> PanelContainer:
 	# タイプ名
 	var name_label := Label.new()
 	name_label.text = type_name
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 28)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	text_vbox.add_child(name_label)
 
 	# 説明文
 	var desc_label := Label.new()
 	desc_label.text = description
-	desc_label.add_theme_font_size_override("font_size", 18)
+	desc_label.add_theme_font_size_override("font_size", 22)
 	desc_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text_vbox.add_child(desc_label)
@@ -159,7 +176,7 @@ func _build_card(type_data: Dictionary) -> PanelContainer:
 			risk_text = "リスク: —"
 			risk_color = COLOR_TEXT_GRAY
 	risk_label.text = risk_text
-	risk_label.add_theme_font_size_override("font_size", 18)
+	risk_label.add_theme_font_size_override("font_size", 22)
 	risk_label.add_theme_color_override("font_color", risk_color)
 	text_vbox.add_child(risk_label)
 
@@ -169,7 +186,7 @@ func _build_card(type_data: Dictionary) -> PanelContainer:
 		if unlock_text != "":
 			var unlock_label := Label.new()
 			unlock_label.text = "🔒 " + unlock_text
-			unlock_label.add_theme_font_size_override("font_size", 16)
+			unlock_label.add_theme_font_size_override("font_size", 20)
 			unlock_label.add_theme_color_override("font_color", COLOR_UNLOCK_TEXT)
 			unlock_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			text_vbox.add_child(unlock_label)
@@ -218,7 +235,8 @@ func _build_ui() -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	_overlay.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed:
-			_on_cancel_pressed()
+			if not _is_emergency:
+				_on_cancel_pressed()
 	)
 	_panel_root.add_child(_overlay)
 
@@ -242,7 +260,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "💵 資金調達"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE_GOLD)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
@@ -254,7 +272,7 @@ func _build_ui() -> void:
 
 	# 情報ラベル（調達可能額・クールダウン）
 	_info_label = Label.new()
-	_info_label.add_theme_font_size_override("font_size", 22)
+	_info_label.add_theme_font_size_override("font_size", 26)
 	_info_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70))
 	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -276,8 +294,7 @@ func _build_ui() -> void:
 	_cancel_button = Button.new()
 	_cancel_button.text = "戻る"
 	_cancel_button.custom_minimum_size = Vector2(0, 56)
-	_cancel_button.add_theme_font_size_override("font_size", 24)
-	_cancel_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_cancel_button.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	vbox.add_child(_cancel_button)

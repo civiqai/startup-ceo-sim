@@ -169,7 +169,7 @@ func _build_ui() -> void:
 
 	# --- 名前ラベル ---
 	_name_label = Label.new()
-	_name_label.add_theme_font_size_override("font_size", 20)
+	_name_label.add_theme_font_size_override("font_size", 24)
 	_name_label.add_theme_color_override("font_color", COLOR_TITLE)
 	_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -177,7 +177,7 @@ func _build_ui() -> void:
 
 	# --- 説明ラベル ---
 	_desc_label = Label.new()
-	_desc_label.add_theme_font_size_override("font_size", 14)
+	_desc_label.add_theme_font_size_override("font_size", 18)
 	_desc_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	_desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_desc_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -218,8 +218,7 @@ func _build_ui() -> void:
 	_close_button.text = "閉じる"
 	_close_button.custom_minimum_size = Vector2(0, 48)
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_close_button.add_theme_font_size_override("font_size", 18)
-	_close_button.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	_close_button.add_theme_font_size_override("font_size", 22)
 	KenneyTheme.apply_button_style(_close_button, "grey")
 	_close_button.pressed.connect(_on_close_pressed)
 	_button_row.add_child(_close_button)
@@ -231,7 +230,7 @@ func _build_ui() -> void:
 	_content_vbox.add_child(_confirm_row)
 
 	_confirm_label = Label.new()
-	_confirm_label.add_theme_font_size_override("font_size", 16)
+	_confirm_label.add_theme_font_size_override("font_size", 20)
 	_confirm_label.add_theme_color_override("font_color", COLOR_EFFECT_NEGATIVE)
 	_confirm_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_confirm_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -250,8 +249,7 @@ func _build_ui() -> void:
 	_confirm_no_button.text = "キャンセル"
 	_confirm_no_button.custom_minimum_size = Vector2(0, 48)
 	_confirm_no_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_confirm_no_button.add_theme_font_size_override("font_size", 18)
-	_confirm_no_button.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	_confirm_no_button.add_theme_font_size_override("font_size", 22)
 	KenneyTheme.apply_button_style(_confirm_no_button, "grey")
 	_confirm_no_button.pressed.connect(_on_cancel_sell)
 	confirm_btn_row.add_child(_confirm_no_button)
@@ -310,7 +308,7 @@ func _rebuild_effects_display(effects: Dictionary) -> void:
 	if effects.is_empty():
 		var no_effect := Label.new()
 		no_effect.text = "  効果なし"
-		no_effect.add_theme_font_size_override("font_size", 16)
+		no_effect.add_theme_font_size_override("font_size", 20)
 		no_effect.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		no_effect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_effects_container.add_child(no_effect)
@@ -339,7 +337,7 @@ func _make_effects_title_box() -> PanelContainer:
 
 	var title_label := Label.new()
 	title_label.text = "効果"
-	title_label.add_theme_font_size_override("font_size", 16)
+	title_label.add_theme_font_size_override("font_size", 20)
 	title_label.add_theme_color_override("font_color", COLOR_ACCENT)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -356,13 +354,13 @@ func _make_effect_row(effect_type: String, value: int) -> HBoxContainer:
 
 	var icon_label := Label.new()
 	icon_label.text = OfficeBuffManager.get_effect_icon(effect_type)
-	icon_label.add_theme_font_size_override("font_size", 16)
+	icon_label.add_theme_font_size_override("font_size", 20)
 	icon_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon_label)
 
 	var name_label := Label.new()
 	name_label.text = OfficeBuffManager.get_effect_display_name(effect_type)
-	name_label.add_theme_font_size_override("font_size", 16)
+	name_label.add_theme_font_size_override("font_size", 20)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -371,7 +369,7 @@ func _make_effect_row(effect_type: String, value: int) -> HBoxContainer:
 	var value_label := Label.new()
 	var sign_str := "+" if value >= 0 else ""
 	value_label.text = "%s%d" % [sign_str, value]
-	value_label.add_theme_font_size_override("font_size", 16)
+	value_label.add_theme_font_size_override("font_size", 20)
 	if value >= 0:
 		value_label.add_theme_color_override("font_color", COLOR_EFFECT_POSITIVE)
 	else:
@@ -403,7 +401,7 @@ func _rebuild_upgrade_section(item: Dictionary) -> void:
 	# ヘッダ
 	var header := Label.new()
 	header.text = "⬆ アップグレード可能"
-	header.add_theme_font_size_override("font_size", 16)
+	header.add_theme_font_size_override("font_size", 20)
 	header.add_theme_color_override("font_color", Color(0.85, 0.75, 0.30))
 	header.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_upgrade_section.add_child(header)
@@ -411,7 +409,7 @@ func _rebuild_upgrade_section(item: Dictionary) -> void:
 	# 次のティア名
 	var next_name := Label.new()
 	next_name.text = "→ %s" % upgrade_item.get("name", "")
-	next_name.add_theme_font_size_override("font_size", 16)
+	next_name.add_theme_font_size_override("font_size", 20)
 	next_name.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	next_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_upgrade_section.add_child(next_name)
@@ -430,7 +428,7 @@ func _rebuild_upgrade_section(item: Dictionary) -> void:
 	_upgrade_button = Button.new()
 	_upgrade_button.text = "アップグレード (%d万円)" % upgrade_cost
 	_upgrade_button.custom_minimum_size = Vector2(0, 48)
-	_upgrade_button.add_theme_font_size_override("font_size", 18)
+	_upgrade_button.add_theme_font_size_override("font_size", 22)
 	_upgrade_button.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 
 	var can_afford := GameState.cash >= upgrade_cost
@@ -438,7 +436,6 @@ func _rebuild_upgrade_section(item: Dictionary) -> void:
 		_apply_stylebox_to_button(_upgrade_button, COLOR_UPGRADE_BTN)
 	else:
 		KenneyTheme.apply_button_style(_upgrade_button, "grey")
-		_upgrade_button.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		_upgrade_button.disabled = true
 
 	_upgrade_button.pressed.connect(
@@ -474,13 +471,13 @@ func _build_effects_comparison(current: Dictionary, upgraded: Dictionary) -> VBo
 
 		var icon_lbl := Label.new()
 		icon_lbl.text = icon
-		icon_lbl.add_theme_font_size_override("font_size", 14)
+		icon_lbl.add_theme_font_size_override("font_size", 18)
 		icon_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(icon_lbl)
 
 		var name_lbl := Label.new()
 		name_lbl.text = ename
-		name_lbl.add_theme_font_size_override("font_size", 14)
+		name_lbl.add_theme_font_size_override("font_size", 18)
 		name_lbl.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(name_lbl)
@@ -489,7 +486,7 @@ func _build_effects_comparison(current: Dictionary, upgraded: Dictionary) -> VBo
 		var cur_sign := "+" if cur_val >= 0 else ""
 		var new_sign := "+" if new_val >= 0 else ""
 		arrow_lbl.text = "%s%d → %s%d" % [cur_sign, cur_val, new_sign, new_val]
-		arrow_lbl.add_theme_font_size_override("font_size", 14)
+		arrow_lbl.add_theme_font_size_override("font_size", 18)
 		if new_val > cur_val:
 			arrow_lbl.add_theme_color_override("font_color", COLOR_EFFECT_POSITIVE)
 		elif new_val < cur_val:
@@ -521,7 +518,7 @@ func _make_action_button(text: String, bg_color: Color) -> Button:
 	btn.text = text
 	btn.custom_minimum_size = Vector2(0, 48)
 	btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_font_size_override("font_size", 22)
 	btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	_apply_stylebox_to_button(btn, bg_color)
 	return btn

@@ -69,7 +69,8 @@ func _build_card(channel_data: Dictionary) -> Button:
 	var channel_color: Color = channel_data.get("color", Color.WHITE)
 	var cost: int = channel_data.get("cost", 0)
 
-	var available := MarketingChannels.is_available(channel_id, GameState)
+	var phase_unlocked := MarketingChannels.is_phase_unlocked(channel_id, GameState)
+	var available: bool = phase_unlocked and MarketingChannels.is_available(channel_id, GameState)
 
 	# Button + テキストで構成（ScrollContainer内でスクロールとタップを自動区別）
 	var btn := Button.new()
@@ -104,10 +105,15 @@ func _build_card(channel_data: Dictionary) -> Button:
 
 	# ボタンのテキストを複数行で構成
 	var cost_text := "コスト: %d万円" % cost
-	if not available:
+	if not phase_unlocked:
+		var required_phase: int = channel_data.get("phase", 0)
+		var phase_names := ["シード期", "アーリー", "シリーズA", "シリーズB", "プレIPO", "IPO"]
+		var phase_name: String = phase_names[mini(required_phase, phase_names.size() - 1)]
+		cost_text += "  🔒 %sで解放" % phase_name
+	elif not available:
 		cost_text += "  🔒 資金不足"
 	btn.text = "%s %s\n%s\n%s" % [icon, channel_name, description, cost_text]
-	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_font_size_override("font_size", 22)
 	btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE if available else COLOR_TEXT_GRAY)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 
@@ -175,7 +181,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "📢 マーケティング"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE_GREEN)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
@@ -187,7 +193,7 @@ func _build_ui() -> void:
 
 	# 情報ラベル（現在の資金）
 	_info_label = Label.new()
-	_info_label.add_theme_font_size_override("font_size", 22)
+	_info_label.add_theme_font_size_override("font_size", 26)
 	_info_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70))
 	_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -209,8 +215,7 @@ func _build_ui() -> void:
 	_cancel_button = Button.new()
 	_cancel_button.text = "戻る"
 	_cancel_button.custom_minimum_size = Vector2(0, 56)
-	_cancel_button.add_theme_font_size_override("font_size", 24)
-	_cancel_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_cancel_button.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	vbox.add_child(_cancel_button)

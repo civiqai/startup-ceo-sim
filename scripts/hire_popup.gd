@@ -362,7 +362,7 @@ func _build_candidate_card(candidate: Dictionary, fee_rate: float, index: int) -
 	# イニシャル（フォールバック表示）
 	var initial_label := Label.new()
 	initial_label.text = cand_name.left(1)
-	initial_label.add_theme_font_size_override("font_size", 28)
+	initial_label.add_theme_font_size_override("font_size", 32)
 	initial_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	initial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	initial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -396,21 +396,21 @@ func _build_candidate_card(candidate: Dictionary, fee_rate: float, index: int) -
 	# 1行目: 絵文字 + 名前 + レベル
 	var name_label := Label.new()
 	name_label.text = "%s %s  Lv.%s" % [emoji, cand_name, stars]
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 28)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	vbox.add_child(name_label)
 
 	# 2行目: スキルタイプ / パーソナリティ
 	var detail_label := Label.new()
 	detail_label.text = "%s / %s" % [skill_name, personality_name]
-	detail_label.add_theme_font_size_override("font_size", 20)
+	detail_label.add_theme_font_size_override("font_size", 24)
 	detail_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	vbox.add_child(detail_label)
 
 	# 3行目: 年収 / 採用費
 	var cost_label := Label.new()
 	cost_label.text = "年収: %d万円 / 採用費: %d万円" % [salary, hire_fee]
-	cost_label.add_theme_font_size_override("font_size", 20)
+	cost_label.add_theme_font_size_override("font_size", 24)
 	cost_label.add_theme_color_override("font_color", Color(0.55, 0.85, 0.70))
 	vbox.add_child(cost_label)
 
@@ -430,7 +430,7 @@ func _build_candidate_card(candidate: Dictionary, fee_rate: float, index: int) -
 	var hire_btn := Button.new()
 	hire_btn.text = "採用する"
 	hire_btn.custom_minimum_size = Vector2(0, 48)
-	hire_btn.add_theme_font_size_override("font_size", 22)
+	hire_btn.add_theme_font_size_override("font_size", 26)
 	hire_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	hire_btn.add_theme_stylebox_override("normal", hire_btn_style)
 	hire_btn.add_theme_stylebox_override("hover", hire_btn_hover)
@@ -518,7 +518,7 @@ func _build_ui() -> void:
 	# タイトル
 	_title_label = Label.new()
 	_title_label.text = "👥 人材を採用"
-	_title_label.add_theme_font_size_override("font_size", 28)
+	_title_label.add_theme_font_size_override("font_size", 32)
 	_title_label.add_theme_color_override("font_color", COLOR_TITLE)
 	_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_title_label)
@@ -531,7 +531,7 @@ func _build_ui() -> void:
 	# チャネル選択セクション
 	var channel_section_label := Label.new()
 	channel_section_label.text = "【採用チャネル選択】"
-	channel_section_label.add_theme_font_size_override("font_size", 20)
+	channel_section_label.add_theme_font_size_override("font_size", 24)
 	channel_section_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	channel_section_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(channel_section_label)
@@ -549,7 +549,7 @@ func _build_ui() -> void:
 		var btn := Button.new()
 		btn.text = "%s\n%s" % [ch_data["name"], ch_data["description"]]
 		btn.custom_minimum_size = Vector2(180, 56)
-		btn.add_theme_font_size_override("font_size", 18)
+		btn.add_theme_font_size_override("font_size", 22)
 		btn.pressed.connect(_on_channel_pressed.bind(channel_id))
 		_channel_container.add_child(btn)
 		_channel_buttons[channel_id] = btn
@@ -570,8 +570,7 @@ func _build_ui() -> void:
 	_cancel_button = Button.new()
 	_cancel_button.text = "キャンセル"
 	_cancel_button.custom_minimum_size = Vector2(0, 56)
-	_cancel_button.add_theme_font_size_override("font_size", 24)
-	_cancel_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	_cancel_button.add_theme_font_size_override("font_size", 28)
 	KenneyTheme.apply_button_style(_cancel_button, "grey")
 	_cancel_button.pressed.connect(_on_cancel_pressed)
 	vbox.add_child(_cancel_button)
@@ -612,8 +611,8 @@ func _show_fire_selection() -> void:
 
 	# タイトル
 	var title := Label.new()
-	title.text = "⚠️ チームが上限（%d人）です" % TeamManager.MAX_MEMBERS
-	title.add_theme_font_size_override("font_size", 26)
+	title.text = "⚠️ チームが上限（%d人）です" % TeamManager.get_max_members()
+	title.add_theme_font_size_override("font_size", 30)
 	title.add_theme_color_override("font_color", Color(0.95, 0.65, 0.30))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
@@ -625,14 +624,14 @@ func _show_fire_selection() -> void:
 	var new_emoji: String = SKILL_EMOJI.get(_pending_candidate.get("skill_type", ""), "")
 	var info_label := Label.new()
 	info_label.text = "採用予定: %s %s（%s Lv.%s）" % [new_emoji, new_name, new_skill, "★".repeat(new_level)]
-	info_label.add_theme_font_size_override("font_size", 20)
+	info_label.add_theme_font_size_override("font_size", 24)
 	info_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(info_label)
 
 	var desc := Label.new()
 	desc.text = "入れ替えるメンバーを選んでください"
-	desc.add_theme_font_size_override("font_size", 20)
+	desc.add_theme_font_size_override("font_size", 24)
 	desc.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(desc)
@@ -661,8 +660,7 @@ func _show_fire_selection() -> void:
 	var back_btn := Button.new()
 	back_btn.text = "戻る"
 	back_btn.custom_minimum_size = Vector2(0, 52)
-	back_btn.add_theme_font_size_override("font_size", 22)
-	back_btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	back_btn.add_theme_font_size_override("font_size", 26)
 	KenneyTheme.apply_button_style(back_btn, "grey")
 	back_btn.pressed.connect(_on_fire_back_pressed)
 	vbox.add_child(back_btn)
@@ -720,7 +718,7 @@ func _build_fire_member_card(member, index: int) -> PanelContainer:
 
 	var initial_label := Label.new()
 	initial_label.text = member.member_name.left(1)
-	initial_label.add_theme_font_size_override("font_size", 22)
+	initial_label.add_theme_font_size_override("font_size", 26)
 	initial_label.add_theme_color_override("font_color", Color(1, 1, 1))
 	initial_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	initial_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -749,13 +747,13 @@ func _build_fire_member_card(member, index: int) -> PanelContainer:
 
 	var name_label := Label.new()
 	name_label.text = "%s %s  Lv.%s" % [emoji, member.member_name, stars]
-	name_label.add_theme_font_size_override("font_size", 22)
+	name_label.add_theme_font_size_override("font_size", 26)
 	name_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	info_vbox.add_child(name_label)
 
 	var detail_label := Label.new()
 	detail_label.text = "%s / %s / 年収%d万円" % [skill_name, personality_name, member.salary]
-	detail_label.add_theme_font_size_override("font_size", 18)
+	detail_label.add_theme_font_size_override("font_size", 22)
 	detail_label.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 	info_vbox.add_child(detail_label)
 
@@ -775,7 +773,7 @@ func _build_fire_member_card(member, index: int) -> PanelContainer:
 	var fire_btn := Button.new()
 	fire_btn.text = "🔄 解雇して入れ替え"
 	fire_btn.custom_minimum_size = Vector2(0, 42)
-	fire_btn.add_theme_font_size_override("font_size", 20)
+	fire_btn.add_theme_font_size_override("font_size", 24)
 	fire_btn.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
 	fire_btn.add_theme_stylebox_override("normal", fire_btn_style)
 	fire_btn.add_theme_stylebox_override("hover", fire_btn_hover)

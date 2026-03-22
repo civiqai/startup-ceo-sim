@@ -76,6 +76,31 @@ static func choose_action(strategy: Strategy, gs_snapshot: Dictionary) -> String
 	return "develop"
 
 
+## 時価総額の計算（新バランス: revenue×40, brand²×5, rep×300, team²×50）
+static func _calc_valuation(s: Dictionary) -> int:
+	var revenue: int = _calc_revenue(s)
+	var product_component: int = s.users * s.product_power
+	var brand_component: int = s.get("brand_value", 0) * s.get("brand_value", 0) * 5
+	var revenue_component: int = revenue * 40
+	var reputation_component: int = maxi(s.reputation - 30, 0) * 300
+	var team_component: int = s.team_size * s.team_size * 50
+	return product_component + brand_component + revenue_component + reputation_component + team_component
+
+
+## MRR計算
+static func _calc_revenue(s: Dictionary) -> int:
+	if s.users <= 0:
+		return 0
+	var arpu: float = s.product_power / 50.0  # 簡略化: pp=50で1.0
+	var brand_mult: float = 1.0 + s.get("brand_value", 0) / 100.0
+	return int(s.users * arpu * brand_mult)
+
+
+## 月間コスト計算（インフラコスト含む）
+static func _calc_monthly_cost(s: Dictionary) -> int:
+	return s.team_size * 50 + s.users / 100
+
+
 ## 1ゲームをシミュレーション（GameStateを直接操作）
 static func simulate_one_game(strategy: Strategy) -> Dictionary:
 	# ローカル状態でシミュレーション
@@ -86,7 +111,9 @@ static func simulate_one_game(strategy: Strategy) -> Dictionary:
 		"team_morale": 70,
 		"users": 0,
 		"reputation": 30,
+		"brand_value": 0,
 		"month": 0,
+		"marketing_count": 0,
 	}
 
 	var result := {
@@ -98,16 +125,24 @@ static func simulate_one_game(strategy: Strategy) -> Dictionary:
 		"final_users": 0,
 	}
 
-	# イベント定義（簡易版）
+	# イベント定義（簡易版 - スケーリング対応）
 	var event_effects := [
-		func(s: Dictionary): s.users += randi_range(100, 500); s.reputation += 10,
-		func(s: Dictionary): s.users -= randi_range(30, 100); s.users = maxi(s.users, 0),
+		func(s: Dictionary):
+			var gain = maxi(randi_range(100, 500), int(s.users * randf_range(0.05, 0.15)))
+			s.users += gain; s.reputation += 10,
+		func(s: Dictionary):
+			var loss = maxi(randi_range(30, 100), int(s.users * randf_range(0.05, 0.10)))
+			s.users = maxi(s.users - loss, 0),
 		func(s: Dictionary):
 			if s.team_size > 1:
 				s.team_size -= 1; s.team_morale -= 15,
-		func(s: Dictionary): s.cash -= 100; s.reputation -= 5,
-		func(s: Dictionary): s.cash += 500; s.reputation += 15,
-		func(s: Dictionary): s.reputation -= 20; s.reputation = maxi(s.reputation, 0); s.users += randi_range(50, 200),
+		func(s: Dictionary):
+			var cost = maxi(100, _calc_monthly_cost(s) * randi_range(1, 3))
+			s.cash -= cost; s.reputation -= 5,
+		func(s: Dictionary):
+			var gain = maxi(500, _calc_monthly_cost(s) * randi_range(1, 3))
+			s.cash += gain; s.reputation += 15,
+		func(s: Dictionary): s.reputation -= 20; s.reputation = maxi(s.reputation, 0); s.brand_value = mini(s.brand_value + 5, 100),
 		func(s: Dictionary): s.team_size += 1; s.team_morale += 5,
 		func(s: Dictionary): s.reputation += randi_range(5, 20),
 	]
@@ -117,22 +152,33 @@ static func simulate_one_game(strategy: Strategy) -> Dictionary:
 		var action := choose_action(strategy, state)
 		_apply_action_to_state(state, action)
 
-		# ランダムイベント（30%）
-		if randf() <= 0.3:
+		# ランダムイベント（40%）
+		if randf() <= 0.4:
 			var effect = event_effects[randi() % event_effects.size()]
 			effect.call(state)
 
 		# 月末処理
 		state.month += 1
-		state.cash -= state.team_size * 50
+		# 売上入金
+		state.cash += _calc_revenue(state)
+		# 月次チャーン（pp依存: pp=100で1%, pp=0で5%）
+		if state.users > 0:
+			var churn_rate: float = maxf(0.05 - state.product_power * 0.0003, 0.01)
+			state.users = maxi(state.users - int(state.users * churn_rate), 0)
+		# ブランド自然減衰
+		if state.brand_value >= 20:
+			state.brand_value -= 1
+		# コスト（インフラ費含む）
+		state.cash -= _calc_monthly_cost(state)
 
 		# クランプ
 		state.team_morale = clampi(state.team_morale, 0, 100)
 		state.reputation = clampi(state.reputation, 0, 100)
 		state.product_power = clampi(state.product_power, 0, 100)
 		state.users = maxi(state.users, 0)
+		state.brand_value = clampi(state.get("brand_value", 0), 0, 100)
 
-		var valuation: int = state.users * state.product_power + state.reputation * 100
+		var valuation: int = _calc_valuation(state)
 
 		# 判定
 		if state.cash <= 0:
@@ -154,7 +200,7 @@ static func simulate_one_game(strategy: Strategy) -> Dictionary:
 			return result
 
 	# タイムアウト
-	var valuation: int = state.users * state.product_power + state.reputation * 100
+	var valuation: int = _calc_valuation(state)
 	result.won = false
 	result.months = MAX_TURNS
 	result.reason = "タイムアウト（%dヶ月）" % MAX_TURNS
@@ -179,8 +225,12 @@ static func _apply_action_to_state(state: Dictionary, action: String) -> void:
 		"marketing":
 			if state.cash >= 100:
 				state.cash -= 100
-				var gain = randi_range(50, 200) * state.product_power / 10
+				# 収穫逓減: 使うほど効率低下
+				var fatigue: float = 1.0 / (1.0 + state.marketing_count * 0.15)
+				var gain = int(randi_range(50, 200) * state.product_power / 10.0 * fatigue)
 				state.users += gain
+				state.brand_value = mini(state.get("brand_value", 0) + randi_range(1, 3), 100)
+				state.marketing_count += 1
 		"fundraise":
 			var amount = randi_range(500, 2000) * state.reputation / 30
 			state.cash += amount
