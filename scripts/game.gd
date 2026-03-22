@@ -1416,6 +1416,9 @@ func _trigger_quarterly_event() -> void:
 # --- 家具ショップ/配置コールバック ---
 
 func _on_shop_button_pressed() -> void:
+	if GameState.tutorial_month >= 0:
+		_add_log("[color=#E85555]チュートリアル完了後に利用できます。[/color]")
+		return
 	AudioManager.play_sfx("click")
 	furniture_shop_popup.show_shop()
 
@@ -1475,6 +1478,9 @@ func _on_furniture_detail_closed() -> void:
 
 
 func _on_expand_button_pressed() -> void:
+	if GameState.tutorial_month >= 0:
+		_add_log("[color=#E85555]チュートリアル完了後に利用できます。[/color]")
+		return
 	AudioManager.play_sfx("click")
 	office_expansion_popup.show_popup()
 
