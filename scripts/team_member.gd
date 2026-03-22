@@ -11,6 +11,11 @@ extends Resource
 @export var months_employed: int = 0  # 在籍月数
 @export var stamina: float = 100.0  # 体力 (0-100)
 @export var avatar_id: int = 0  # アバター識別用ID (1-70)
+@export var experience: int = 0  # 累計経験値
+@export var training: String = ""  # 訓練中なら訓練ID（空なら通常勤務）
+@export var training_remaining: int = 0  # 訓練の不在残りターン数
+@export var turnover_risk: float = 0.0  # 転職リスク (0.0〜1.0)
+@export var exp_multiplier: float = 1.0  # 経験値倍率（熊遭遇等の一時バフ用）
 var is_at_office: bool = false
 var work_state: String = "idle"  # idle, working, resting, left
 
@@ -44,6 +49,35 @@ const PERSONALITY_EFFECTS := {
 	"analytical": {"type": "reputation", "value": 0.10},
 	"leader": {"type": "team_productivity", "value": 0.05},
 }
+
+
+# レベルアップ経験値テーブル（必要累計経験値）
+const EXP_TABLE := {
+	2: 100,
+	3: 350,
+	4: 850,
+	5: 1850,
+}
+
+
+## 経験値を加算し、レベルアップしたかを返す
+func add_experience(amount: int) -> bool:
+	var adjusted := int(amount * exp_multiplier)
+	experience += adjusted
+	if skill_level >= 5:
+		return false
+	var next_level := skill_level + 1
+	var required: int = EXP_TABLE.get(next_level, 99999)
+	if experience >= required:
+		skill_level = next_level
+		calculate_salary()
+		return true
+	return false
+
+
+## 訓練中かどうか（不在中）
+func is_in_training() -> bool:
+	return training != "" and training_remaining > 0
 
 
 ## 1時間の作業で体力を消費する

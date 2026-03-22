@@ -4,6 +4,7 @@ extends Control
 const FundraiseTypes = preload("res://scripts/fundraise_types.gd")
 const MarketingChannels = preload("res://scripts/marketing_channels.gd")
 const TeamMemberClass = preload("res://scripts/team_member.gd")
+const TrainingData = preload("res://scripts/training_data.gd")
 
 var turn_manager: Node
 var log_text: String = ""
@@ -14,6 +15,7 @@ var marketing_select_popup: Node
 var hire_popup: Node
 var team_list_popup: Node
 var member_detail_popup: Node
+var training_popup: Node
 var milestone_manager: Node
 var milestone_popup: Node
 var secretary_popup: Node
@@ -103,6 +105,7 @@ func _ready() -> void:
 	GameState.game_over.connect(_on_game_over)
 	GameState.game_clear.connect(_on_game_clear)
 	GameState.emergency_fundraise_triggered.connect(_on_emergency_fundraise)
+	GameState.headhunt_occurred.connect(_on_headhunt_occurred)
 
 	# アクションメニューポップアップ（CanvasLayer）
 	var ActionMenuScript = load("res://scripts/action_menu_popup.gd")
@@ -171,6 +174,21 @@ func _ready() -> void:
 	member_detail_popup.member_promoted.connect(_on_member_promoted)
 	member_detail_popup.member_fired.connect(_on_member_fired)
 	member_detail_popup.popup_closed.connect(_on_member_detail_closed)
+	member_detail_popup.training_requested.connect(_on_training_requested)
+
+	# 訓練選択ポップアップ
+	var TrainingPopupScript = load("res://scripts/training_popup.gd")
+	training_popup = CanvasLayer.new()
+	training_popup.set_script(TrainingPopupScript)
+	add_child(training_popup)
+	training_popup.training_selected.connect(_on_training_selected)
+	training_popup.team_training_selected.connect(_on_team_training_selected)
+
+	# レベルアップ通知
+	TeamManager.member_leveled_up.connect(_on_member_leveled_up)
+
+	# 訓練完了シグナル
+	GameState.training_completed.connect(_on_training_completed)
 
 	# マイルストーン管理
 	var MilestoneManagerScript = load("res://scripts/milestone_manager.gd")
@@ -712,6 +730,10 @@ func _on_team_btn_pressed() -> void:
 			"role": m.role,
 			"salary": m.salary,
 			"months_employed": m.months_employed,
+			"experience": m.experience,
+			"training": m.training,
+			"training_remaining": m.training_remaining,
+			"turnover_risk": m.turnover_risk,
 		})
 	team_list_popup.show_team(members_data)
 
@@ -729,6 +751,10 @@ func _on_team_member_selected(member_index: int) -> void:
 		"salary": m.salary,
 		"months_employed": m.months_employed,
 		"cxo_exists_for_skill": TeamManager.has_cxo(m.skill_type),
+		"experience": m.experience,
+		"training": m.training,
+		"training_remaining": m.training_remaining,
+		"turnover_risk": m.turnover_risk,
 	}
 	member_detail_popup.show_member(data, member_index)
 
@@ -762,9 +788,233 @@ func _on_member_fired(member_index: int) -> void:
 	_update_ui()
 
 
+func _on_member_leveled_up(member, old_level: int, new_level: int) -> void:
+	var skill_label := TeamMemberClass.get_skill_label(member.skill_type)
+	_add_log("[color=#FFD700]🎉 %s（%s）がLv.%dにレベルアップ！[/color]" % [member.member_name, skill_label, new_level])
+
+
 func _on_member_detail_closed() -> void:
 	# チーム一覧を再表示
 	_on_team_btn_pressed()
+
+
+func _on_training_requested(member_index: int) -> void:
+	if member_index < 0 or member_index >= TeamManager.members.size():
+		return
+	var m = TeamManager.members[member_index]
+	var data := {
+		"member_name": m.member_name,
+		"skill_type": m.skill_type,
+		"skill_level": m.skill_level,
+	}
+	training_popup.show_for_member(data, member_index, GameState.current_phase)
+
+
+func _on_training_selected(training_id: String, member_index: int) -> void:
+	if member_index < 0 or member_index >= TeamManager.members.size():
+		return
+	var training := TrainingData.get_training(training_id)
+	if training.is_empty():
+		return
+	var member = TeamManager.members[member_index]
+	var cost: int = training.get("cost", 0)
+	if GameState.cash < cost:
+		_add_log("[color=#E85555]資金が足りません！（必要: %d万円）[/color]" % cost)
+		return
+	GameState.cash -= cost
+	var absent_turns: int = training.get("absent_turns", 0)
+	if absent_turns > 0:
+		# 不在ありの訓練：メンバーを訓練状態にセット
+		member.training = training_id
+		member.training_remaining = absent_turns
+		var icon: String = training.get("icon", "📖")
+		_add_log("%s %sを「%s」に送り出した！（%d万円・%dターン不在）" % [icon, member.member_name, training.get("name", ""), cost, absent_turns])
+	else:
+		# 即時効果の訓練（不在なし）
+		_apply_training_immediate(training, member)
+	_update_ui()
+	# ターンを消費しない（訓練はアクションの代わりではない）
+
+
+func _on_team_training_selected(training_id: String, speaker_index: int) -> void:
+	var training := TrainingData.get_training(training_id)
+	if training.is_empty():
+		return
+	var cost: int = training.get("cost", 0)
+	if GameState.cash < cost:
+		_add_log("[color=#E85555]資金が足りません！（必要: %d万円）[/color]" % cost)
+		return
+	GameState.cash -= cost
+	var icon: String = training.get("icon", "📖")
+	var exp_amount: int = training.get("exp", 0)
+	var morale_change: int = training.get("morale", 0)
+
+	# 全メンバーに経験値付与（自社カンファレンスの登壇者は不在中のため、帰還時に別途付与）
+	for m in TeamManager.members:
+		# 自社カンファレンスの登壇者はスキップ（_on_training_completedでspeaker_exp付与）
+		if training_id == "company_conference" and speaker_index >= 0:
+			if TeamManager.members.find(m) == speaker_index:
+				continue
+		var leveled_up: bool = m.add_experience(exp_amount)
+		if leveled_up:
+			TeamManager.member_leveled_up.emit(m, m.skill_level - 1, m.skill_level)
+
+	# 士気変動
+	if morale_change != 0:
+		GameState.team_morale = clampi(GameState.team_morale + morale_change, 0, 100)
+
+	# 追加効果（reputation, brand）
+	var rep_bonus: int = training.get("reputation_bonus", 0)
+	if rep_bonus > 0:
+		GameState.reputation = mini(GameState.reputation + rep_bonus, 100)
+	var brand_bonus: int = training.get("brand_bonus", 0)
+	if brand_bonus > 0:
+		GameState.brand_value = mini(GameState.brand_value + brand_bonus, 100)
+
+	# 自社カンファレンス: 不在1ターン（準備期間）
+	if training.get("absent_turns", 0) > 0 and training_id == "company_conference":
+		# 登壇者のみ不在にする
+		if speaker_index >= 0 and speaker_index < TeamManager.members.size():
+			var speaker = TeamManager.members[speaker_index]
+			speaker.training = training_id
+			speaker.training_remaining = training.get("absent_turns", 1)
+
+	_add_log("%s 「%s」を開催！全員にEXP+%d" % [icon, training.get("name", ""), exp_amount])
+
+	# チームイベントの特殊イベント抽選
+	var special := TrainingData.roll_special_event(training_id)
+	if not special.is_empty():
+		var target_member = null
+		if speaker_index >= 0 and speaker_index < TeamManager.members.size():
+			target_member = TeamManager.members[speaker_index]
+		elif TeamManager.members.size() > 0:
+			target_member = TeamManager.members[randi() % TeamManager.members.size()]
+		_apply_special_training_event(special, target_member, training_id)
+
+	_update_ui()
+
+
+## 即時効果の訓練を適用するヘルパー
+func _apply_training_immediate(training: Dictionary, member) -> void:
+	var exp_amount: int = training.get("exp", 0)
+	var morale_change: int = training.get("morale", 0)
+	var turnover_delta: float = training.get("turnover_delta", 0.0)
+	var icon: String = training.get("icon", "📖")
+
+	var leveled_up: bool = member.add_experience(exp_amount)
+	if leveled_up:
+		TeamManager.member_leveled_up.emit(member, member.skill_level - 1, member.skill_level)
+	# 訓練適用後にexp_multiplierをリセット（熊遭遇バフは「次回訓練まで」）
+	member.exp_multiplier = 1.0
+	if morale_change != 0:
+		GameState.team_morale = clampi(GameState.team_morale + morale_change, 0, 100)
+	if turnover_delta > 0.0:
+		member.turnover_risk = minf(member.turnover_risk + turnover_delta, 1.0)
+
+	_add_log("%s %sが「%s」を受講！EXP+%d" % [icon, member.member_name, training.get("name", ""), exp_amount])
+
+
+## 訓練完了シグナルのハンドラ（advance_month()から発火）
+func _on_training_completed(member, training_id: String) -> void:
+	var training := TrainingData.get_training(training_id)
+	if training.is_empty():
+		return
+	# 自社カンファレンスの登壇者はspeaker_expを使用（帰還者は登壇者のみ）
+	var exp_amount: int = training.get("speaker_exp", 0) if training.has("speaker_exp") else training.get("exp", 0)
+	var morale_change: int = training.get("morale", 0)
+	var turnover_delta: float = training.get("turnover_delta", 0.0)
+	var icon: String = training.get("icon", "📖")
+
+	# 経験値付与
+	var leveled_up: bool = member.add_experience(exp_amount)
+	if leveled_up:
+		TeamManager.member_leveled_up.emit(member, member.skill_level - 1, member.skill_level)
+	# 訓練適用後にexp_multiplierをリセット（熊遭遇バフは「次回訓練まで」）
+	member.exp_multiplier = 1.0
+
+	# 士気変動（自社カンファレンスの場合、全体士気は開催時に適用済みなので登壇者帰還時はスキップ）
+	if training_id != "company_conference" and morale_change != 0:
+		GameState.team_morale = clampi(GameState.team_morale + morale_change, 0, 100)
+
+	# 転職リスク変動
+	if turnover_delta > 0.0:
+		member.turnover_risk = minf(member.turnover_risk + turnover_delta, 1.0)
+
+	_add_log("%s %sが「%s」から帰還！EXP+%d" % [icon, member.member_name, training.get("name", ""), exp_amount])
+
+	# 特殊イベント抽選
+	var special := TrainingData.roll_special_event(training_id)
+	if not special.is_empty():
+		_apply_special_training_event(special, member, training_id)
+
+
+func _apply_special_training_event(event: Dictionary, member, training_id: String) -> void:
+	var effect: String = event.get("effect", "")
+	var message: String = event.get("message", "")
+	# メンバー名をメッセージに埋め込む（%sがあれば）
+	var member_name := "チーム"
+	if member != null:
+		member_name = member.member_name
+	if "%s" in message:
+		message = message % member_name
+
+	AudioManager.play_sfx("notification")
+
+	match effect:
+		"skill_level_up":
+			# 覚醒（山籠もり）: skill_level即+1
+			if member != null and member.skill_level < 5:
+				var old_level: int = member.skill_level
+				member.skill_level += 1
+				member.calculate_salary()
+				TeamManager.member_leveled_up.emit(member, old_level, member.skill_level)
+			_add_log("[color=#FFD700]✨ 【覚醒】%s[/color]" % message)
+
+		"bear_encounter":
+			# 熊遭遇: stamina-30、exp_multiplier=1.5
+			if member != null:
+				member.stamina = maxf(member.stamina - 30.0, 0.0)
+				member.exp_multiplier = 1.5
+			_add_log("[color=#FF8855]🐻 【熊遭遇】%s[/color]" % message)
+
+		"desertion":
+			# 脱走（地獄の新人研修）: メンバーが退職
+			if member != null:
+				TeamManager.fire(member)
+			# 残りメンバーの士気-5
+			GameState.team_morale = maxi(GameState.team_morale - 5, 0)
+			_add_log("[color=#E85555]💨 【脱走】%s[/color]" % message)
+			_update_ui()
+			return  # メンバーが消えたのでこれ以降の処理はスキップ
+
+		"personality_diligent":
+			# 覚醒（地獄の新人研修）: 性格が「勤勉」に変化
+			if member != null:
+				member.personality = "diligent"
+			_add_log("[color=#FFD700]💪 【覚醒】%s[/color]" % message)
+
+		"reputation_up":
+			# 人脈獲得（海外カンファレンス）: reputation+5
+			GameState.reputation = mini(GameState.reputation + 5, 100)
+			_add_log("[color=#88BBDD]🤝 【人脈獲得】%s[/color]" % message)
+
+		"team_bond":
+			# チーム結束（開発合宿）: 全員の士気+15
+			GameState.team_morale = mini(GameState.team_morale + 15, 100)
+			_add_log("[color=#88DDAA]🤝 【チーム結束】%s[/color]" % message)
+
+		"product_idea":
+			# アイデア発見（ハッカソン）: product_power+5
+			GameState.add_product_power(5)
+			_add_log("[color=#DDC066]💡 【アイデア発見】%s[/color]" % message)
+
+		"media_coverage":
+			# メディア掲載（自社カンファレンス）: brand+3, users+500
+			GameState.brand_value = mini(GameState.brand_value + 3, 100)
+			GameState.users += 500
+			_add_log("[color=#DDAA55]📰 【メディア掲載】%s[/color]" % message)
+
+	_update_ui()
 
 
 func _on_event_popup_closed(_choice_index: int) -> void:
@@ -1183,6 +1433,60 @@ func _on_emergency_fundraise(amount: int, dilution: float) -> void:
 	_add_log("[color=#FFD966]⚠️ 資金が底をつきそうに！緊急資金調達を実施しました。[/color]")
 	_add_log("[color=#FFD966]💵 調達額: %d万円（持株 -%.1f%%）[/color]" % [amount, dilution])
 	_update_ui()
+
+
+func _on_headhunt_occurred(member, offer_salary: int) -> void:
+	var member_name: String = member.member_name
+	var skill_label := TeamMemberClass.get_skill_label(member.skill_type)
+	var current_salary: int = member.salary
+	var member_idx := TeamManager.members.find(member)
+
+	var choices := []
+	# 選択肢1: 昇給して引き留める
+	choices.append({
+		"label": "💰 昇給して引き留める（年収+20%）",
+		"effect": func(gs):
+			if member_idx >= 0 and member_idx < TeamManager.members.size():
+				var m = TeamManager.members[member_idx]
+				m.salary = int(m.salary * 1.2)
+				m.turnover_risk = 0.0
+				gs.team_morale = mini(gs.team_morale + 5, 100)
+			return "%sの年収を%d万円に引き上げて引き留めた！" % [member_name, int(current_salary * 1.2)],
+	})
+	# 選択肢2: 昇進で引き留める（昇進条件を無視して即昇進）
+	var can_promote: bool = member.role != "cxo"
+	if can_promote:
+		var next_role_map := {"member": "leader", "leader": "manager", "manager": "cxo"}
+		var next_role: String = next_role_map.get(member.role, "")
+		var next_role_label: String = TeamMemberClass.get_role_label(next_role)
+		if next_role == "cxo":
+			next_role_label = TeamMemberClass.get_cxo_title(member.skill_type)
+		choices.append({
+			"label": "📈 %sに昇進させて引き留める" % next_role_label,
+			"effect": func(gs):
+				if member_idx >= 0 and member_idx < TeamManager.members.size():
+					var m = TeamManager.members[member_idx]
+					TeamManager.promote(m, next_role)
+					m.turnover_risk = 0.0
+				return "%sを%sに昇進させて引き留めた！" % [member_name, next_role_label],
+		})
+	# 選択肢3: 引き留めない
+	choices.append({
+		"label": "👋 引き留めない",
+		"effect": func(gs):
+			if member_idx >= 0 and member_idx < TeamManager.members.size():
+				var m = TeamManager.members[member_idx]
+				TeamManager.fire(m)
+				gs.team_morale = maxi(gs.team_morale - 10, 0)
+			return "%sは転職していった…残りメンバーの士気が下がった。" % member_name,
+	})
+
+	var event_data := {
+		"title": "💼 引き抜きオファー",
+		"description": "%s（%s Lv.%d）に他社から年収%d万円のオファーが来ています！\n現在の年収: %d万円" % [member_name, skill_label, member.skill_level, offer_salary, current_salary],
+		"choices": choices,
+	}
+	event_popup.show_event(event_data)
 
 
 func _on_game_over(reason: String) -> void:

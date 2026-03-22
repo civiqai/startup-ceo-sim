@@ -7,6 +7,7 @@ const TeamMemberClass = preload("res://scripts/team_member.gd")
 signal member_hired(member)
 signal member_left(member)
 signal member_promoted(member, old_role, new_role)
+signal member_leveled_up(member, old_level: int, new_level: int)
 
 var members: Array[Resource] = []
 
@@ -123,6 +124,8 @@ func get_total_personality_effect(effect_type: String) -> float:
 ## 全メンバーを出社させる
 func all_arrive() -> void:
 	for m in members:
+		if m.is_in_training():
+			continue  # 訓練中は出社しない
 		if m.stamina > 10.0:  # 体力10以下は欠勤
 			m.arrive_at_office()
 

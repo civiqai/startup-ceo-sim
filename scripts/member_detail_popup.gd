@@ -3,9 +3,11 @@ extends CanvasLayer
 ## メンバーの詳細情報を表示し、昇進・解雇アクションを提供する
 
 const TeamMemberRef = preload("res://scripts/team_member.gd")
+const TrainingData = preload("res://scripts/training_data.gd")
 
 signal member_promoted(member_index: int, new_role: String)
 signal member_fired(member_index: int)
+signal training_requested(member_index: int)
 signal popup_closed()
 
 var _is_open := false
@@ -23,6 +25,11 @@ var _promote_button: Button
 var _promotion_condition_label: Label
 var _fire_button: Button
 var _close_button: Button
+var _training_section: VBoxContainer
+var _training_title_label: Label
+var _training_status_label: Label
+var _training_btn: Button
+var _exp_label: Label
 
 # スキルタイプ別アイコン
 const SKILL_ICONS := {
@@ -97,10 +104,23 @@ func show_member(member_data: Dictionary, member_index: int) -> void:
 	info_lines.append("役職: %s" % role_label_text)
 	info_lines.append("年収: %d万円" % salary)
 	info_lines.append("在籍: %dヶ月" % months_employed)
+	var turnover_risk: float = member_data.get("turnover_risk", 0.0)
+	if turnover_risk > 0.0:
+		var risk_label: String
+		if turnover_risk <= 0.05:
+			risk_label = "😊 安定"
+		elif turnover_risk <= 0.10:
+			risk_label = "🤔 そわそわ"
+		else:
+			risk_label = "💭 転職サイト見てる…"
+		info_lines.append("転職リスク: %s" % risk_label)
 	_info_label.text = "\n".join(info_lines)
 
 	# 昇進セクション更新
 	_update_promotion_section(member_data)
+
+	# 訓練セクション更新
+	_update_training_section(member_data)
 
 	_panel_root.visible = true
 	_is_open = true
@@ -150,10 +170,8 @@ func _update_promotion_section(member_data: Dictionary) -> void:
 	# ボタンのスタイルを状態に応じて変更（Kenney UIスタイル）
 	if can_promote:
 		KenneyTheme.apply_button_style(_promote_button, "green")
-		_promote_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	else:
 		KenneyTheme.apply_button_style(_promote_button, "grey")
-		_promote_button.add_theme_color_override("font_color", COLOR_TEXT_GRAY)
 
 	# 条件テキスト
 	var conditions := PackedStringArray()
@@ -164,6 +182,48 @@ func _update_promotion_section(member_data: Dictionary) -> void:
 	if next_role == "cxo" and not meets_cxo_constraint:
 		conditions.append("❌ 同スキルのCxOが既に存在します")
 	_promotion_condition_label.text = "\n".join(conditions)
+
+
+## 訓練セクションの表示を更新する
+func _update_training_section(member_data: Dictionary) -> void:
+	var experience: int = member_data.get("experience", 0)
+	var training: String = member_data.get("training", "")
+	var training_remaining: int = member_data.get("training_remaining", 0)
+	var skill_level: int = member_data.get("skill_level", 1)
+
+	_training_section.visible = true
+	_training_title_label.text = "【訓練】"
+
+	# 経験値ゲージ
+	var next_level := skill_level + 1
+	var exp_table: Dictionary = TeamMemberRef.EXP_TABLE
+	if skill_level >= 5:
+		_exp_label.text = "EXP: %d（最大レベル）" % experience
+	else:
+		var required: int = exp_table.get(next_level, 99999)
+		var remaining := maxi(required - experience, 0)
+		_exp_label.text = "EXP: %d / %d（Lv.%dまであと%d）" % [experience, required, next_level, remaining]
+
+	# 訓練中チェック
+	if training != "" and training_remaining > 0:
+		var training_data := TrainingData.get_training(training)
+		var training_name: String = training_data.get("name", training)
+		var training_icon: String = training_data.get("icon", "")
+		_training_status_label.text = "訓練中: %s %s（残り%dターン）" % [training_icon, training_name, training_remaining]
+		_training_status_label.visible = true
+		_training_btn.disabled = true
+		KenneyTheme.apply_button_style(_training_btn, "grey")
+	else:
+		_training_status_label.visible = false
+		_training_btn.disabled = false
+		KenneyTheme.apply_button_style(_training_btn, "blue")
+
+
+func _on_training_btn_pressed() -> void:
+	if not _is_open:
+		return
+	AudioManager.play_sfx("click")
+	training_requested.emit(_member_index)
 
 
 func _on_promote_pressed() -> void:
@@ -285,6 +345,46 @@ func _build_ui() -> void:
 	sep3.add_theme_color_override("separator_color", Color(0.30, 0.32, 0.40))
 	vbox.add_child(sep3)
 
+	# 訓練セクション
+	_training_section = VBoxContainer.new()
+	_training_section.add_theme_constant_override("separation", 8)
+	vbox.add_child(_training_section)
+
+	_training_title_label = Label.new()
+	_training_title_label.text = "【訓練】"
+	_training_title_label.add_theme_font_size_override("font_size", 24)
+	_training_title_label.add_theme_color_override("font_color", COLOR_TEXT_WHITE)
+	_training_section.add_child(_training_title_label)
+
+	# 経験値ラベル
+	_exp_label = Label.new()
+	_exp_label.add_theme_font_size_override("font_size", 18)
+	_exp_label.add_theme_color_override("font_color", COLOR_TEXT_ACCENT)
+	_exp_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_training_section.add_child(_exp_label)
+
+	# 訓練中ステータスラベル
+	_training_status_label = Label.new()
+	_training_status_label.add_theme_font_size_override("font_size", 18)
+	_training_status_label.add_theme_color_override("font_color", Color(0.90, 0.75, 0.30))
+	_training_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_training_status_label.visible = false
+	_training_section.add_child(_training_status_label)
+
+	# 訓練に送るボタン
+	_training_btn = Button.new()
+	_training_btn.text = "訓練に送る"
+	_training_btn.custom_minimum_size = Vector2(0, 52)
+	_training_btn.add_theme_font_size_override("font_size", 22)
+	KenneyTheme.apply_button_style(_training_btn, "blue")
+	_training_btn.pressed.connect(_on_training_btn_pressed)
+	_training_section.add_child(_training_btn)
+
+	# 区切り線
+	var sep4 := HSeparator.new()
+	sep4.add_theme_color_override("separator_color", Color(0.30, 0.32, 0.40))
+	vbox.add_child(sep4)
+
 	# ボタン行（解雇 + 閉じる）
 	var button_row := HBoxContainer.new()
 	button_row.add_theme_constant_override("separation", 12)
@@ -296,7 +396,6 @@ func _build_ui() -> void:
 	_fire_button.custom_minimum_size = Vector2(0, 52)
 	_fire_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_fire_button.add_theme_font_size_override("font_size", 22)
-	_fire_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	KenneyTheme.apply_button_style(_fire_button, "red")
 	_fire_button.pressed.connect(_on_fire_pressed)
 	button_row.add_child(_fire_button)
@@ -307,7 +406,6 @@ func _build_ui() -> void:
 	_close_button.custom_minimum_size = Vector2(0, 52)
 	_close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_close_button.add_theme_font_size_override("font_size", 22)
-	_close_button.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	KenneyTheme.apply_button_style(_close_button, "grey")
 	_close_button.pressed.connect(_on_close_pressed)
 	button_row.add_child(_close_button)

@@ -5,6 +5,10 @@ signal state_changed
 signal game_over(reason: String)
 signal game_clear(reason: String)
 signal emergency_fundraise_triggered(amount: int, dilution: float)
+signal training_completed(member, training_id: String)
+signal headhunt_occurred(member, offer_salary: int)
+
+const TeamMemberClass = preload("res://scripts/team_member.gd")
 
 # 経営パラメータ
 var cash: int = 1000         # 資金（万円）
@@ -179,10 +183,60 @@ func advance_month() -> void:
 	# メンバーの在籍月数を更新
 	for m in TeamManager.members:
 		m.months_employed += 1
+	# パッシブ経験値成長
+	for m in TeamManager.members:
+		if m.is_in_training():
+			continue  # 訓練中は別途付与
+		var base_exp := randi_range(10, 15)
+		# 士気70以上ボーナス
+		if team_morale >= 70:
+			base_exp += 5
+		# 同スキルタイプにリーダー以上がいればボーナス
+		for other in TeamManager.members:
+			if other != m and other.skill_type == m.skill_type and other.role in ["leader", "manager", "cxo"]:
+				base_exp += 5
+				break
+		var leveled_up: bool = m.add_experience(base_exp)
+		if leveled_up:
+			TeamManager.member_leveled_up.emit(m, m.skill_level - 1, m.skill_level)
+	# 転職リスク自然減衰 (-0.02/月、下限0)
+	for m in TeamManager.members:
+		m.turnover_risk = maxf(m.turnover_risk - 0.02, 0.0)
+	# 訓練進行処理
+	var _training_completed_members: Array = []
+	for m in TeamManager.members:
+		if m.training != "" and m.training_remaining > 0:
+			m.training_remaining -= 1
+			if m.training_remaining <= 0:
+				_training_completed_members.append({"member": m, "training_id": m.training})
+				m.training = ""
+				m.training_remaining = 0
+	for completed in _training_completed_members:
+		training_completed.emit(completed["member"], completed["training_id"])
 	# ムードメーカーの士気ボーナス
 	var morale_bonus := int(TeamManager.get_total_personality_effect("morale"))
 	if morale_bonus > 0:
 		team_morale = mini(team_morale + morale_bonus, 100)
+	# 引き抜き判定
+	var _headhunt_targets: Array = []
+	for m in TeamManager.members:
+		if m.turnover_risk <= 0.05:
+			continue
+		if team_morale >= 80:
+			continue  # 居心地が良ければ残る
+		# 給与が相場以下かチェック
+		var market_salary: int = TeamMemberClass.BASE_SALARY.get(m.skill_type, 400) + m.skill_level * 120
+		if m.salary >= market_salary:
+			continue
+		# 発生確率 = turnover_risk * 50%
+		if randf() < m.turnover_risk * 0.5:
+			_headhunt_targets.append(m)
+	for m in _headhunt_targets:
+		var base: int = TeamMemberClass.BASE_SALARY.get(m.skill_type, 400)
+		var offer: int = base + m.skill_level * 150 + randi_range(50, 200)
+		if m.skill_level >= 4:
+			offer += 300  # 高レベルは引き抜きオファーが高い
+		headhunt_occurred.emit(m, offer)
 	# 売上入金
 	cash += revenue
 	# オーガニックユーザー獲得（各プロダクトの知名度×UXベース）

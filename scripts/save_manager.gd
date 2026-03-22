@@ -110,6 +110,11 @@ func _serialize() -> Dictionary:
 			"role": m.role,
 			"salary": m.salary,
 			"months_employed": m.months_employed,
+			"experience": m.experience,
+			"training": m.training,
+			"training_remaining": m.training_remaining,
+			"turnover_risk": m.turnover_risk,
+			"exp_multiplier": m.exp_multiplier,
 		})
 
 	var now := Time.get_datetime_dict_from_system()
@@ -186,6 +191,11 @@ func _deserialize(data: Dictionary) -> bool:
 		member.role = str(m_data.get("role", "member"))
 		member.salary = int(m_data.get("salary", 0))
 		member.months_employed = int(m_data.get("months_employed", 0))
+		member.experience = int(m_data.get("experience", 0))
+		member.training = str(m_data.get("training", ""))
+		member.training_remaining = int(m_data.get("training_remaining", 0))
+		member.turnover_risk = float(m_data.get("turnover_risk", 0.0))
+		member.exp_multiplier = float(m_data.get("exp_multiplier", 1.0))
 		TeamManager.members.append(member)
 
 	# ProductManagerの復元

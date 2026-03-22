@@ -110,6 +110,32 @@ startup-ceo-sim/
 - `.tscn` ファイルは `[gd_scene]` ヘッダで始まるテキスト形式
 - モバイルUIは `Control` ノード + アンカー/マージンで配置
 
+### `:=` 型推論の禁止パターン
+GDScript の `:=` は右辺の型が静的に確定しないとパースエラーになる。以下のケースでは **`:=` を使わず明示的に型を書くこと**:
+- `Resource` 型変数のメソッド呼び出し結果: `var result: bool = member.add_experience(100)` (`member` が `Array[Resource]` 由来の場合)
+- `Dictionary.get()` の戻り値: `var value: int = dict.get("key", 0)` (戻り値は `Variant`)
+- `Array` から取り出した要素のプロパティ: `var level: int = members[i].skill_level`
+- Autoload シングルトン経由のプロパティ比較: `var flag: bool = member.role != "cxo"`
+
+`:=` が安全に使えるのは、右辺がリテラル・`new()`・型が明確な関数呼び出し（`randi_range()` 等）の場合のみ。
+
+### KenneyTheme ボタンスタイルのルール
+`KenneyTheme.apply_button_style(btn, color)` は `font_color` を色に応じて自動設定する（grey → 薄いグレー、yellow → 暗い茶色、他 → デフォルト）。
+
+**絶対に手動で `add_theme_color_override("font_color", ...)` を設定しないこと。** `apply_button_style` に任せる。
+```gdscript
+# ✅ 正しい
+KenneyTheme.apply_button_style(btn, "grey")
+
+# ❌ 間違い — apply_button_style の色設定を上書きして文字が見えなくなる
+btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+KenneyTheme.apply_button_style(btn, "grey")
+
+# ❌ 間違い — apply_button_style が設定した色を白で上書きしてしまう
+KenneyTheme.apply_button_style(btn, "grey")
+btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+```
+
 ## Important Notes
 - スマホ縦画面前提（720x1280）
 - タッチ操作のみ（キーボード不要）
