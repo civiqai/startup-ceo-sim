@@ -446,10 +446,10 @@ func _show_purchase_confirm(item_id: String) -> void:
 		eff_vbox.add_child(eff_title)
 
 		for effect_type in effects:
-			var value = effects[effect_type]
+			var value: int = effects[effect_type]
 			var icon_str: String = OfficeBuffManager.get_effect_icon(effect_type)
 			var display_name: String = OfficeBuffManager.get_effect_display_name(effect_type)
-			var sign := "+" if value > 0 else ""
+			var sign: String = "+" if value > 0 else ""
 			var eff_label := Label.new()
 			eff_label.text = "%s %s: %s%s" % [icon_str, display_name, sign, str(value)]
 			eff_label.add_theme_font_size_override("font_size", 18)
@@ -612,9 +612,9 @@ func _format_effects(effects: Dictionary) -> String:
 		return ""
 	var parts: Array[String] = []
 	for effect_type in effects:
-		var value = effects[effect_type]
+		var value: int = effects[effect_type]
 		var icon_str: String = OfficeBuffManager.get_effect_icon(effect_type)
-		var sign := "+" if value > 0 else ""
+		var sign: String = "+" if value > 0 else ""
 		parts.append("%s%s%s" % [icon_str, sign, str(value)])
 	return " ".join(parts)
 
@@ -629,7 +629,7 @@ func _update_cash_display() -> void:
 func _update_category_buttons() -> void:
 	for cat_id in _category_buttons:
 		var btn: Button = _category_buttons[cat_id]
-		var is_active := cat_id == _current_category
+		var is_active: bool = cat_id == _current_category
 
 		var style := StyleBoxFlat.new()
 		style.bg_color = COLOR_CATEGORY_ACTIVE if is_active else COLOR_CATEGORY_INACTIVE
