@@ -29,7 +29,7 @@ var _current_grid_pos: Vector2i = Vector2i.ZERO
 var _placing_item_size: Vector2i = Vector2i(1, 1)
 
 # --- 配置UI ---
-var _placement_overlay: CanvasLayer = null
+var _placement_overlay: Node = null
 
 
 func _ready() -> void:
@@ -419,94 +419,60 @@ func _flash_invalid() -> void:
 # ============================================================
 
 ## 配置モード用のボタンオーバーレイを表示する
+## SubViewportContainer上に直接HBoxContainerを配置して、タイルマップビュー下端に表示する
 func _show_placement_overlay() -> void:
 	_hide_placement_overlay()
 
-	_placement_overlay = CanvasLayer.new()
-	_placement_overlay.name = "PlacementOverlay"
-	_placement_overlay.layer = 20
+	# SubViewportContainer を取得（ボタンの親として使う）
+	var viewport_container := _get_viewport_container()
+	if viewport_container == null:
+		push_warning("FurniturePlacement: SubViewportContainer が見つかりません")
+		return
 
 	var container := HBoxContainer.new()
-	container.name = "ButtonContainer"
-	container.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	container.name = "PlacementButtons"
 	container.alignment = BoxContainer.ALIGNMENT_CENTER
-	container.add_theme_constant_override("separation", 16)
-	# 画面下部に配置
-	container.position = Vector2(0, -60)
-	container.size = Vector2(720, 50)
-	container.anchor_bottom = 1.0
-	container.anchor_top = 1.0
-	container.anchor_left = 0.0
-	container.anchor_right = 1.0
-	container.offset_top = -60
-	container.offset_bottom = -10
+	container.add_theme_constant_override("separation", 12)
+	# SubViewportContainerの下端に配置
+	var vc_size: Vector2 = viewport_container.size
+	container.position = Vector2(0, vc_size.y - 42)
+	container.size = Vector2(vc_size.x, 40)
 
 	# キャンセルボタン
 	var cancel_btn := Button.new()
 	cancel_btn.text = "✕ キャンセル"
-	cancel_btn.custom_minimum_size = Vector2(160, 44)
+	cancel_btn.custom_minimum_size = Vector2(140, 36)
 	var cancel_style := StyleBoxFlat.new()
-	cancel_style.bg_color = Color(0.75, 0.20, 0.20, 0.9)
-	cancel_style.corner_radius_top_left = 6
-	cancel_style.corner_radius_top_right = 6
-	cancel_style.corner_radius_bottom_left = 6
-	cancel_style.corner_radius_bottom_right = 6
-	cancel_style.content_margin_left = 12.0
-	cancel_style.content_margin_right = 12.0
-	cancel_style.content_margin_top = 6.0
-	cancel_style.content_margin_bottom = 6.0
+	cancel_style.bg_color = Color(0.75, 0.20, 0.20, 0.95)
+	cancel_style.set_corner_radius_all(6)
+	cancel_style.content_margin_left = 10.0
+	cancel_style.content_margin_right = 10.0
+	cancel_style.content_margin_top = 4.0
+	cancel_style.content_margin_bottom = 4.0
 	cancel_btn.add_theme_stylebox_override("normal", cancel_style)
-	cancel_btn.add_theme_font_size_override("font_size", 18)
+	cancel_btn.add_theme_font_size_override("font_size", 16)
 	cancel_btn.pressed.connect(cancel_placement)
-
-	# 回転ボタン（将来用、無効化）
-	var rotate_btn := Button.new()
-	rotate_btn.text = "↻ 回転"
-	rotate_btn.custom_minimum_size = Vector2(120, 44)
-	rotate_btn.disabled = true
-	var rotate_style := StyleBoxFlat.new()
-	rotate_style.bg_color = Color(0.25, 0.45, 0.70, 0.9)
-	rotate_style.corner_radius_top_left = 6
-	rotate_style.corner_radius_top_right = 6
-	rotate_style.corner_radius_bottom_left = 6
-	rotate_style.corner_radius_bottom_right = 6
-	rotate_style.content_margin_left = 12.0
-	rotate_style.content_margin_right = 12.0
-	rotate_style.content_margin_top = 6.0
-	rotate_style.content_margin_bottom = 6.0
-	rotate_btn.add_theme_stylebox_override("normal", rotate_style)
-	rotate_btn.add_theme_font_size_override("font_size", 18)
 
 	# 確定ボタン
 	var confirm_btn := Button.new()
 	confirm_btn.text = "✓ 配置"
-	confirm_btn.custom_minimum_size = Vector2(160, 44)
+	confirm_btn.custom_minimum_size = Vector2(140, 36)
 	var confirm_style := StyleBoxFlat.new()
-	confirm_style.bg_color = Color(0.20, 0.65, 0.30, 0.9)
-	confirm_style.corner_radius_top_left = 6
-	confirm_style.corner_radius_top_right = 6
-	confirm_style.corner_radius_bottom_left = 6
-	confirm_style.corner_radius_bottom_right = 6
-	confirm_style.content_margin_left = 12.0
-	confirm_style.content_margin_right = 12.0
-	confirm_style.content_margin_top = 6.0
-	confirm_style.content_margin_bottom = 6.0
+	confirm_style.bg_color = Color(0.20, 0.65, 0.30, 0.95)
+	confirm_style.set_corner_radius_all(6)
+	confirm_style.content_margin_left = 10.0
+	confirm_style.content_margin_right = 10.0
+	confirm_style.content_margin_top = 4.0
+	confirm_style.content_margin_bottom = 4.0
 	confirm_btn.add_theme_stylebox_override("normal", confirm_style)
-	confirm_btn.add_theme_font_size_override("font_size", 18)
+	confirm_btn.add_theme_font_size_override("font_size", 16)
 	confirm_btn.pressed.connect(confirm_placement)
 
 	container.add_child(cancel_btn)
-	container.add_child(rotate_btn)
 	container.add_child(confirm_btn)
-	_placement_overlay.add_child(container)
 
-	# CanvasLayerはシーンツリーのルート付近に追加（SubViewport内では表示されない）
-	var game_node := _get_game_node()
-	if game_node:
-		game_node.add_child(_placement_overlay)
-	else:
-		# フォールバック: ツリーのルートに追加
-		get_tree().root.add_child(_placement_overlay)
+	viewport_container.add_child(container)
+	_placement_overlay = container
 
 
 ## 配置オーバーレイを非表示にする
@@ -563,13 +529,16 @@ func _get_camera() -> Camera2D:
 	return null
 
 
-## Game ノードを取得する（CanvasLayer の追加先として使用）
-func _get_game_node() -> Node:
-	# Main/Game パスで探す
-	if get_tree():
-		var game := get_tree().root.get_node_or_null("Main/Game")
-		if game:
-			return game
+## SubViewportContainer を取得する（配置ボタンの親として使用）
+func _get_viewport_container() -> Control:
+	# OfficeTilemap → SubViewport → SubViewportContainer
+	var node := get_parent()  # OfficeTilemap
+	if node:
+		var vp := node.get_parent()  # SubViewport
+		if vp:
+			var vpc := vp.get_parent()  # SubViewportContainer
+			if vpc is Control:
+				return vpc
 	return null
 
 
