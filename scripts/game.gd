@@ -341,9 +341,6 @@ func _setup_tilemap_office() -> void:
 	#office_ui_overlay.set_script(OverlayScript)
 	#add_child(office_ui_overlay)
 
-	# カメラ操作ボタンを追加（矢印 + ズーム）
-	_build_camera_controls()
-
 	# 家具配置システムのセットアップ
 	var FurniturePlacementScript = load("res://scripts/furniture_placement.gd")
 	furniture_placement = Node2D.new()
@@ -375,71 +372,6 @@ func _update_office_camera_bounds() -> void:
 	# デフォルトズーム: タイルが見やすいサイズに拡大
 	var default_zoom := 2.0
 	office_camera.zoom = Vector2(default_zoom, default_zoom)
-
-
-func _build_camera_controls() -> void:
-	if office_camera == null:
-		return
-	# 右側に縦並びのカメラ操作ボタン群を配置
-	var panel := VBoxContainer.new()
-	panel.name = "CameraControls"
-	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	panel.position = Vector2(office_viewport_container.size.x - 60, 80)
-	panel.add_theme_constant_override("separation", 2)
-
-	var btn_size := Vector2(44, 44)
-	var btn_font_size := 20
-
-	var zoom_in_btn := Button.new()
-	zoom_in_btn.text = "+"
-	zoom_in_btn.custom_minimum_size = btn_size
-	zoom_in_btn.add_theme_font_size_override("font_size", btn_font_size)
-	zoom_in_btn.pressed.connect(func(): office_camera._smooth_zoom(0.15))
-	panel.add_child(zoom_in_btn)
-
-	var zoom_out_btn := Button.new()
-	zoom_out_btn.text = "-"
-	zoom_out_btn.custom_minimum_size = btn_size
-	zoom_out_btn.add_theme_font_size_override("font_size", btn_font_size)
-	zoom_out_btn.pressed.connect(func(): office_camera._smooth_zoom(-0.15))
-	panel.add_child(zoom_out_btn)
-
-	var sep := Control.new()
-	sep.custom_minimum_size = Vector2(0, 4)
-	panel.add_child(sep)
-
-	var up_btn := Button.new()
-	up_btn.text = "▲"
-	up_btn.custom_minimum_size = btn_size
-	up_btn.add_theme_font_size_override("font_size", btn_font_size)
-	up_btn.pressed.connect(func(): _move_office_camera(Vector2(0, -32)))
-	panel.add_child(up_btn)
-
-	var h_row := HBoxContainer.new()
-	h_row.add_theme_constant_override("separation", 2)
-	var left_btn := Button.new()
-	left_btn.text = "◀"
-	left_btn.custom_minimum_size = btn_size
-	left_btn.add_theme_font_size_override("font_size", btn_font_size)
-	left_btn.pressed.connect(func(): _move_office_camera(Vector2(-32, 0)))
-	h_row.add_child(left_btn)
-	var right_btn := Button.new()
-	right_btn.text = "▶"
-	right_btn.custom_minimum_size = btn_size
-	right_btn.add_theme_font_size_override("font_size", btn_font_size)
-	right_btn.pressed.connect(func(): _move_office_camera(Vector2(32, 0)))
-	h_row.add_child(right_btn)
-	panel.add_child(h_row)
-
-	var down_btn := Button.new()
-	down_btn.text = "▼"
-	down_btn.custom_minimum_size = btn_size
-	down_btn.add_theme_font_size_override("font_size", btn_font_size)
-	down_btn.pressed.connect(func(): _move_office_camera(Vector2(0, 32)))
-	panel.add_child(down_btn)
-
-	office_viewport_container.add_child(panel)
 
 
 func _build_shop_button() -> void:
@@ -476,13 +408,6 @@ func _build_shop_button() -> void:
 	expand_btn.position = Vector2(116, 36)
 	expand_btn.pressed.connect(_on_expand_button_pressed)
 	office_viewport_container.add_child(expand_btn)
-
-
-func _move_office_camera(offset: Vector2) -> void:
-	if office_camera == null:
-		return
-	office_camera.position += offset / office_camera.zoom
-	office_camera._clamp_position()
 
 
 func _get_current_phase_index() -> int:
