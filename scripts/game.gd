@@ -102,6 +102,7 @@ func _ready() -> void:
 
 	GameState.game_over.connect(_on_game_over)
 	GameState.game_clear.connect(_on_game_clear)
+	GameState.emergency_fundraise_triggered.connect(_on_emergency_fundraise)
 
 	# アクションメニューポップアップ（CanvasLayer）
 	var ActionMenuScript = load("res://scripts/action_menu_popup.gd")
@@ -1171,6 +1172,13 @@ func _on_feature_completed(feature: Dictionary) -> void:
 func _on_tech_debt_warning(debt_level: int) -> void:
 	AudioManager.play_sfx("negative")
 	_add_log("[color=#E85555]⚠️ 技術的負債が危険水準に！(%d/100)[/color]" % debt_level)
+
+
+func _on_emergency_fundraise(amount: int, dilution: float) -> void:
+	AudioManager.play_sfx("notification")
+	_add_log("[color=#FFD966]⚠️ 資金が底をつきそうに！緊急資金調達を実施しました。[/color]")
+	_add_log("[color=#FFD966]💵 調達額: %d万円（持株 -%.1f%%）[/color]" % [amount, dilution])
+	_update_ui()
 
 
 func _on_game_over(reason: String) -> void:

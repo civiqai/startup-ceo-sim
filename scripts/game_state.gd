@@ -4,6 +4,7 @@ extends Node
 signal state_changed
 signal game_over(reason: String)
 signal game_clear(reason: String)
+signal emergency_fundraise_triggered(amount: int, dilution: float)
 
 # 経営パラメータ
 var cash: int = 1000         # 資金（万円）
@@ -220,6 +221,12 @@ func advance_month() -> void:
 	})
 
 	if cash <= 0:
+		# 緊急資金調達フォールバック: 資金調達が可能なら倒産前に救済
+		var emergency_amount := _try_emergency_fundraise()
+		if emergency_amount > 0:
+			cash += emergency_amount
+			state_changed.emit()
+			return
 		cash = 0
 		state_changed.emit()
 		game_over.emit("資金がゼロになりました…倒産です。")
@@ -231,6 +238,34 @@ func advance_month() -> void:
 		return
 
 	state_changed.emit()
+
+
+## 緊急資金調達を試みる（倒産回避フォールバック）
+## 資金調達クールダウンが0かつチャレンジで禁止されていない場合、自動で少額調達する
+## 成功時は調達額を返す、不可能なら0を返す
+func _try_emergency_fundraise() -> int:
+	# チャレンジモードで資金調達が禁止されている場合は不可
+	if DifficultyManager.is_action_allowed("fundraise") == false:
+		return 0
+	# クールダウン中は不可
+	if fundraise_cooldown > 0:
+		return 0
+	# 持株比率が10%以下なら希釈しすぎ、調達不可
+	if equity_share <= 10.0:
+		return 0
+	# 受託開発中は不可
+	if contract_work_remaining > 0:
+		return 0
+
+	# 緊急調達: 時価総額ベースで少額を調達（通常の50%程度）
+	var raise_amount := maxi(200, valuation / 20)  # 最低200万円
+	var dilution := clampf(float(raise_amount) / maxf(float(valuation), 1000.0) * 100.0, 2.0, 15.0)
+	equity_share = maxf(equity_share - dilution, 5.0)
+	fundraise_cooldown = 2  # 2ヶ月のクールダウン
+	fundraise_count += 1
+	total_raised += raise_amount
+	emergency_fundraise_triggered.emit(raise_amount, dilution)
+	return raise_amount
 
 
 ## イベント等でランダムメンバーを追加する
