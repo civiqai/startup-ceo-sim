@@ -433,10 +433,10 @@ func _show_placement_overlay() -> void:
 	container.name = "PlacementButtons"
 	container.alignment = BoxContainer.ALIGNMENT_CENTER
 	container.add_theme_constant_override("separation", 12)
-	# SubViewportContainerの下端に配置
+	# SubViewportContainerの右上に配置
 	var vc_size: Vector2 = viewport_container.size
-	container.position = Vector2(0, vc_size.y - 42)
-	container.size = Vector2(vc_size.x, 40)
+	container.position = Vector2(vc_size.x - 310, 4)
+	container.size = Vector2(300, 40)
 
 	# キャンセルボタン
 	var cancel_btn := Button.new()
