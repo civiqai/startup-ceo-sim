@@ -412,11 +412,6 @@ func _create_npc(member_data: Dictionary, index: int) -> Node2D:
 	if _pathfinding != null:
 		npc.set_pathfinding(_pathfinding)
 
-	# Connect tap signal
-	npc.tapped.connect(func(member_idx: int) -> void:
-		member_tapped.emit(member_idx)
-	)
-
 	return npc
 
 
@@ -475,3 +470,59 @@ func get_room_pixel_size() -> Vector2:
 ## 現在のフェーズを返す
 func get_current_phase() -> int:
 	return _current_phase
+
+
+# ============================================================
+# NPC タップ検知（SubViewport内ではArea2D.input_eventが動作しないため
+# _unhandled_input で座標ベースの判定を行う）
+# ============================================================
+
+const NPC_TAP_RADIUS := 20.0  # タップ判定半径（ピクセル）
+
+func _unhandled_input(event: InputEvent) -> void:
+	# タッチまたはマウスクリック
+	var screen_pos: Vector2 = Vector2.ZERO
+	var is_tap := false
+
+	if event is InputEventScreenTouch and event.pressed:
+		screen_pos = event.position
+		is_tap = true
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		screen_pos = event.position
+		is_tap = true
+
+	if not is_tap:
+		return
+
+	# スクリーン座標 → ワールド座標
+	var world_pos := _screen_to_world(screen_pos)
+
+	# 最も近いNPCを探す
+	var closest_key: String = ""
+	var closest_dist: float = NPC_TAP_RADIUS
+
+	for key in _npcs:
+		var npc = _npcs[key]
+		if not is_instance_valid(npc):
+			continue
+		var dist: float = world_pos.distance_to(npc.position)
+		if dist < closest_dist:
+			closest_dist = dist
+			closest_key = key
+
+	if closest_key != "":
+		var npc = _npcs[closest_key]
+		var idx: int = npc.member_index
+		# index 0 = CEO（タップ不可）、1以降 = チームメンバー
+		if idx > 0:
+			member_tapped.emit(idx - 1)
+			get_viewport().set_input_as_handled()
+
+
+## スクリーン座標をワールド座標に変換する
+func _screen_to_world(screen_pos: Vector2) -> Vector2:
+	var viewport := get_viewport()
+	# canvas_transform はカメラのズーム・オフセットを含む変換行列
+	# その逆行列でスクリーン座標→ワールド座標に変換
+	var canvas_xform := viewport.get_canvas_transform()
+	return canvas_xform.affine_inverse() * screen_pos

@@ -706,16 +706,19 @@ func _build_ui() -> void:
 	_panel_root.add_child(_overlay)
 
 	# 中央配置コンテナ
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(center)
-
 	# メインパネル
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(680, 950)
 	KenneyTheme.apply_panel_style(panel, "popup")
-	center.add_child(panel)
+	panel.anchor_left = 0.03
+	panel.anchor_right = 0.97
+	panel.anchor_top = 0.03
+	panel.anchor_bottom = 0.97
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(panel)
 
 	# メインVBox
 	var main_vbox := VBoxContainer.new()

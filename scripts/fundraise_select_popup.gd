@@ -240,22 +240,32 @@ func _build_ui() -> void:
 	)
 	_panel_root.add_child(_overlay)
 
-	# 中央配置コンテナ
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(center)
-
-	# メインパネル（Kenney UIテクスチャ使用）
+	# アンカーベースで画面内に収める
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(640, 0)
+	panel.anchor_left = 0.03
+	panel.anchor_right = 0.97
+	panel.anchor_top = 0.03
+	panel.anchor_bottom = 0.97
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
 	KenneyTheme.apply_panel_style(panel, "popup")
-	center.add_child(panel)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(panel)
+
+	# 外側スクロール
+	var outer_scroll := ScrollContainer.new()
+	outer_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(outer_scroll)
 
 	# メインVBox
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
-	panel.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer_scroll.add_child(vbox)
 
 	# タイトル
 	_title_label = Label.new()
@@ -278,17 +288,11 @@ func _build_ui() -> void:
 	_info_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_info_label)
 
-	# スクロールコンテナ（カード一覧）
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 700)
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	vbox.add_child(scroll)
-
+	# カード一覧
 	_cards_container = VBoxContainer.new()
 	_cards_container.add_theme_constant_override("separation", 12)
 	_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_cards_container)
+	vbox.add_child(_cards_container)
 
 	# キャンセルボタン（Kenney UIスタイル）
 	_cancel_button = Button.new()

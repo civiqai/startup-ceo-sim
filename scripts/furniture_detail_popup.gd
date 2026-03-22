@@ -131,11 +131,6 @@ func _build_ui() -> void:
 	_panel_root.add_child(_overlay)
 
 	# 中央配置コンテナ
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(center)
-
 	# メインパネル
 	_main_panel = PanelContainer.new()
 	_main_panel.custom_minimum_size = Vector2(480, 0)

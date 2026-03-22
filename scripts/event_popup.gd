@@ -11,7 +11,6 @@ var _is_open := false
 
 var _panel_root: Control
 var _overlay: ColorRect
-var _center: CenterContainer
 var _panel: PanelContainer
 var _vbox: VBoxContainer
 var _title_label: Label
@@ -144,22 +143,31 @@ func _build_ui() -> void:
 	)
 	_panel_root.add_child(_overlay)
 
-	# 中央配置コンテナ
-	_center = CenterContainer.new()
-	_center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(_center)
-
-	# パネル（Kenney UIテクスチャ使用）
+	# パネル（Kenney UIテクスチャ使用）— アンカーベース配置
 	_panel = PanelContainer.new()
-	_panel.custom_minimum_size = Vector2(620, 0)
+	_panel.anchor_left = 0.03
+	_panel.anchor_right = 0.97
+	_panel.anchor_top = 0.03
+	_panel.anchor_bottom = 0.97
+	_panel.offset_left = 0
+	_panel.offset_right = 0
+	_panel.offset_top = 0
+	_panel.offset_bottom = 0
 	KenneyTheme.apply_panel_style(_panel, "popup")
-	_center.add_child(_panel)
+	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(_panel)
+
+	var outer_scroll := ScrollContainer.new()
+	outer_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_panel.add_child(outer_scroll)
 
 	# VBoxContainer
 	_vbox = VBoxContainer.new()
 	_vbox.add_theme_constant_override("separation", 18)
-	_panel.add_child(_vbox)
+	_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer_scroll.add_child(_vbox)
 
 	# タイトル
 	_title_label = Label.new()

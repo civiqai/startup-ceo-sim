@@ -116,18 +116,22 @@ func _build_ui() -> void:
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel_root.add_child(overlay)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(center)
-
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(640, 900)
+	panel.anchor_left = 0.03
+	panel.anchor_right = 0.97
+	panel.anchor_top = 0.03
+	panel.anchor_bottom = 0.97
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
 	KenneyTheme.apply_panel_style(panel, "popup")
-	center.add_child(panel)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(panel)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_child(vbox)
 
 	var title := Label.new()
@@ -138,7 +142,6 @@ func _build_ui() -> void:
 	vbox.add_child(title)
 
 	_scroll = ScrollContainer.new()
-	_scroll.custom_minimum_size = Vector2(0, 750)
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vbox.add_child(_scroll)

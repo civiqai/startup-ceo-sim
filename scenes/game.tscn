@@ -94,6 +94,7 @@ visible = false
 
 [node name="SubViewport" type="SubViewport" parent="SafeArea/VBox/OfficeViewport"]
 handle_input_locally = true
+physics_object_picking = true
 size = Vector2i(720, 400)
 render_target_update_mode = 4
 

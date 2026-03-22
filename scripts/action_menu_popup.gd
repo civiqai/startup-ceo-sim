@@ -69,6 +69,8 @@ func update_hire_btn() -> void:
 		_hire_btn.text = "👤 採用する（%d/%d 入替のみ）" % [current, max_m]
 	else:
 		_hire_btn.text = "👤 採用する（%d/%d）" % [current, max_m]
+	_hire_btn.disabled = false
+	_history_btn.disabled = false
 
 
 func update_create_product_btn(active_count: int, has_pm: bool) -> void:
@@ -99,13 +101,8 @@ func update_contract_state(gs) -> void:
 
 
 ## フェーズに応じたアクション制限（チュートリアル完了後に適用）
-func update_phase_state(current_phase: int) -> void:
-	# Phase 0: develop, hire, team_care, contract_work, marketing
-	# Phase 2: + fundraise
-	# マーケティングはフェーズ0から利用可能（チャネルごとにフェーズ制限あり）
-	if current_phase < 2:
-		_fundraise_btn.text = "💵 資金調達（🔒シリーズAで解放）"
-		_fundraise_btn.disabled = true
+func update_phase_state(_current_phase: int) -> void:
+	pass
 
 
 ## チュートリアル中のボタン制限
@@ -166,17 +163,27 @@ func _build_ui() -> void:
 	KenneyTheme.apply_panel_style(_menu_panel, "popup")
 	_menu_panel.anchor_left = 0.0
 	_menu_panel.anchor_right = 1.0
-	_menu_panel.anchor_top = 1.0
+	_menu_panel.anchor_top = 0.25
 	_menu_panel.anchor_bottom = 1.0
-	_menu_panel.offset_top = -590
+	_menu_panel.offset_left = 0
+	_menu_panel.offset_right = 0
+	_menu_panel.offset_top = 0
 	_menu_panel.offset_bottom = 0
 	_menu_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel_root.add_child(_menu_panel)
 
+	# スクロールコンテナ（ボタンが多い場合にスクロール可能）
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_menu_panel.add_child(scroll)
+
 	# ボタン用VBox
 	_buttons_vbox = VBoxContainer.new()
 	_buttons_vbox.add_theme_constant_override("separation", 8)
-	_menu_panel.add_child(_buttons_vbox)
+	_buttons_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_buttons_vbox)
 
 	# アクションボタンを生成（各アクションに色を割当）
 	_create_product_btn = _create_action_btn("📦 プロダクトを作る", "create_product", "blue")

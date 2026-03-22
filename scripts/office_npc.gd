@@ -2,8 +2,6 @@ extends Node2D
 
 # オフィスNPCキャラクター - 固定席で作業するスプライト
 
-signal tapped(member_index: int)
-
 const TILE_SIZE := 32
 const SPRITE_SCALE := Vector2(0.67, 0.67)
 const FRAME_W := 48
@@ -24,7 +22,6 @@ var member_data: Dictionary = {}
 var character_sprite_index: int = 1
 
 var _sprite: AnimatedSprite2D = null
-var _area: Area2D = null
 var _name_label: Label = null
 
 
@@ -64,17 +61,6 @@ func _build_nodes() -> void:
 	_sprite.offset = Vector2(0, -FRAME_H / 2.0)
 	_sprite.play("idle_down")
 	add_child(_sprite)
-
-	# Area2D (タップ検知)
-	_area = Area2D.new()
-	_area.input_pickable = true
-	var collision := CollisionShape2D.new()
-	var shape := CircleShape2D.new()
-	shape.radius = 14.0
-	collision.shape = shape
-	_area.add_child(collision)
-	_area.input_event.connect(_on_area_input_event)
-	add_child(_area)
 
 	# NameLabel
 	_name_label = Label.new()
@@ -125,9 +111,3 @@ func _create_sprite_frames(sheet_path: String) -> SpriteFrames:
 	return frames
 
 
-func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
-	if event is InputEventMouseButton:
-		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:
-			if member_index > 0:
-				tapped.emit(member_index - 1)

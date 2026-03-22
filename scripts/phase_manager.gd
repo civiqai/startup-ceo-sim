@@ -20,7 +20,7 @@ const PHASE_DATA := [
 		"id": 2, "name": "シリーズA", "icon": "🚀",
 		"description": "成長の加速フェーズ",
 		"mrr": 200, "users": 3000, "team": 5, "raised": 3000,
-		"unlocks": ["fundraise"],
+		"unlocks": [],
 	},
 	{
 		"id": 3, "name": "シリーズB", "icon": "📈",

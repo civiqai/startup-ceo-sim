@@ -237,12 +237,7 @@ func _show_confirm(slot: String) -> void:
 	bg.mouse_filter = Control.MOUSE_FILTER_STOP
 	_confirm_overlay.add_child(bg)
 
-	# 確認パネル
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_confirm_overlay.add_child(center)
-
+	# 確認パネル — アンカーベース配置
 	var confirm_style := StyleBoxFlat.new()
 	confirm_style.bg_color = Color(0.12, 0.13, 0.20)
 	confirm_style.border_width_left = 2
@@ -260,9 +255,17 @@ func _show_confirm(slot: String) -> void:
 	confirm_style.content_margin_bottom = 24
 
 	var confirm_panel := PanelContainer.new()
-	confirm_panel.custom_minimum_size = Vector2(500, 0)
+	confirm_panel.anchor_left = 0.05
+	confirm_panel.anchor_right = 0.95
+	confirm_panel.anchor_top = 0.25
+	confirm_panel.anchor_bottom = 0.75
+	confirm_panel.offset_left = 0
+	confirm_panel.offset_right = 0
+	confirm_panel.offset_top = 0
+	confirm_panel.offset_bottom = 0
 	confirm_panel.add_theme_stylebox_override("panel", confirm_style)
-	center.add_child(confirm_panel)
+	confirm_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_confirm_overlay.add_child(confirm_panel)
 
 	var cvbox := VBoxContainer.new()
 	cvbox.add_theme_constant_override("separation", 20)
@@ -382,21 +385,24 @@ func _build_ui() -> void:
 	)
 	_panel_root.add_child(_overlay)
 
-	# 中央配置コンテナ
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(center)
-
-	# メインパネル（Kenney UIテクスチャ使用）
+	# メインパネル（Kenney UIテクスチャ使用）— アンカーベース配置
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(640, 0)
+	panel.anchor_left = 0.03
+	panel.anchor_right = 0.97
+	panel.anchor_top = 0.03
+	panel.anchor_bottom = 0.97
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
 	KenneyTheme.apply_panel_style(panel, "popup")
-	center.add_child(panel)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(panel)
 
 	# メインVBox
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.add_child(vbox)
 
 	# タイトル
@@ -414,7 +420,6 @@ func _build_ui() -> void:
 
 	# スクロールコンテナ（カード一覧）
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(0, 600)
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	vbox.add_child(scroll)

@@ -43,9 +43,9 @@ var _ok_button: Button
 var _panel_style: StyleBox
 
 # Board layout
-const SQUARE_W := 130
-const SQUARE_H := 65
-const GAP := 8
+const SQUARE_W := 150
+const SQUARE_H := 60
+const GAP := 6
 const BOARD_COLS := 4
 
 # Dice animation thresholds
@@ -339,23 +339,33 @@ func _build_ui() -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel_root.add_child(_overlay)
 
-	# 中央配置
-	var center = CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel_root.add_child(center)
-
-	# パネル（Kenney UIテクスチャ使用）
+	# アンカーベースで画面内に収める
 	_panel_style = KenneyTheme.make_popup_panel_style()
 
 	var panel = PanelContainer.new()
-	panel.custom_minimum_size = Vector2(620, 0)
+	panel.anchor_left = 0.03
+	panel.anchor_right = 0.97
+	panel.anchor_top = 0.03
+	panel.anchor_bottom = 0.97
+	panel.offset_left = 0
+	panel.offset_right = 0
+	panel.offset_top = 0
+	panel.offset_bottom = 0
 	panel.add_theme_stylebox_override("panel", _panel_style)
-	center.add_child(panel)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel_root.add_child(panel)
+
+	# 外側スクロール
+	var outer_scroll = ScrollContainer.new()
+	outer_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	outer_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(outer_scroll)
 
 	var vbox = VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 12)
-	panel.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	outer_scroll.add_child(vbox)
 
 	# タイトル
 	_title_label = Label.new()
