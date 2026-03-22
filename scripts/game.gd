@@ -828,7 +828,11 @@ func _on_turn_ended() -> void:
 	# 受託開発中の表示
 	elif GameState.contract_work_remaining > 0:
 		_add_log("[color=#DDA055]🏗️ 受託開発中: %s（残%dヶ月）[/color]" % [GameState.contract_work_name, GameState.contract_work_remaining])
-	_add_log("[color=#8899AA]— 月末: 固定費 %d万円 / 売上 %d万円 —[/color]" % [GameState.monthly_cost, GameState.revenue])
+	var loan_payment := GameState.get_monthly_loan_payment()
+	if loan_payment > 0:
+		_add_log("[color=#8899AA]— 月末: 固定費 %d万円 / 売上 %d万円 / 返済 %d万円（残債 %d万円）—[/color]" % [GameState.monthly_cost, GameState.revenue, loan_payment, GameState.total_loan_balance])
+	else:
+		_add_log("[color=#8899AA]— 月末: 固定費 %d万円 / 売上 %d万円 —[/color]" % [GameState.monthly_cost, GameState.revenue])
 	_update_ui()
 
 	# プロダクト開発進捗

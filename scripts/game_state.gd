@@ -65,6 +65,10 @@ var total_raised: int = 0       # 累計調達額
 var fundraise_count: int = 0    # 調達回数
 var equity_share: float = 100.0  # 持ち株比率 (%) - 初期100%
 
+# 借入金（銀行融資・ファクタリング）
+var loans: Array[Dictionary] = []  # [{source, principal, remaining, monthly_payment, interest_rate, months_left}]
+var total_loan_balance: int = 0    # 借入残高合計（表示用キャッシュ）
+
 # 受託開発
 var contract_work_remaining: int = 0  # 受託開発残り月数
 var contract_work_name: String = ""   # 受託案件名
@@ -153,6 +157,8 @@ func reset() -> void:
 	total_raised = 0
 	fundraise_count = 0
 	equity_share = 100.0
+	loans.clear()
+	total_loan_balance = 0
 	contract_work_remaining = 0
 	contract_work_name = ""
 	contract_work_reward = 0
@@ -207,6 +213,8 @@ func advance_month() -> void:
 	# 資金調達クールダウン
 	if fundraise_cooldown > 0:
 		fundraise_cooldown -= 1
+	# 借入金の月次返済
+	_process_loan_payments()
 	cash -= monthly_cost
 
 	# 月次KPI履歴を記録
@@ -241,31 +249,84 @@ func advance_month() -> void:
 
 
 ## 緊急資金調達を試みる（倒産回避フォールバック）
-## 資金調達クールダウンが0かつチャレンジで禁止されていない場合、自動で少額調達する
+## エクイティ調達 → 緊急借入（高金利）の順で試行する
 ## 成功時は調達額を返す、不可能なら0を返す
 func _try_emergency_fundraise() -> int:
 	# チャレンジモードで資金調達が禁止されている場合は不可
 	if DifficultyManager.is_action_allowed("fundraise") == false:
 		return 0
-	# クールダウン中は不可
-	if fundraise_cooldown > 0:
-		return 0
-	# 持株比率が10%以下なら希釈しすぎ、調達不可
-	if equity_share <= 10.0:
-		return 0
-	# 受託開発中は不可
-	if contract_work_remaining > 0:
-		return 0
 
-	# 緊急調達: 時価総額ベースで少額を調達（通常の50%程度）
-	var raise_amount := maxi(200, valuation / 20)  # 最低200万円
-	var dilution := clampf(float(raise_amount) / maxf(float(valuation), 1000.0) * 100.0, 2.0, 15.0)
-	equity_share = maxf(equity_share - dilution, 5.0)
-	fundraise_cooldown = 2  # 2ヶ月のクールダウン
-	fundraise_count += 1
-	total_raised += raise_amount
-	emergency_fundraise_triggered.emit(raise_amount, dilution)
-	return raise_amount
+	# 1. エクイティ調達を試みる（クールダウンなし＋持株10%超）
+	if fundraise_cooldown == 0 and equity_share > 10.0 and contract_work_remaining == 0:
+		var raise_amount := maxi(200, valuation / 20)
+		var dilution := clampf(float(raise_amount) / maxf(float(valuation), 1000.0) * 100.0, 2.0, 15.0)
+		equity_share = maxf(equity_share - dilution, 5.0)
+		fundraise_cooldown = 2
+		fundraise_count += 1
+		total_raised += raise_amount
+		emergency_fundraise_triggered.emit(raise_amount, dilution)
+		return raise_amount
+
+	# 2. 緊急借入（ファクタリング的な高金利短期借入）
+	#    クールダウン中でも利用可能、借入残高が売上の12ヶ月分以下なら
+	var max_borrow := maxi(500, revenue * 3)  # 月商の3倍まで
+	if total_loan_balance < max_borrow:
+		var borrow_amount := maxi(300, monthly_cost + abs(cash))  # 赤字を補填+α
+		borrow_amount = mini(borrow_amount, max_borrow - total_loan_balance)
+		# 高金利（年利20%相当）、6ヶ月返済
+		add_loan("緊急ファクタリング", borrow_amount, 0.10, 6)
+		emergency_fundraise_triggered.emit(borrow_amount, 0.0)
+		return borrow_amount
+
+	return 0
+
+
+## 借入金を追加する（銀行融資・ファクタリング用）
+func add_loan(source: String, principal: int, interest_rate: float, repay_months: int) -> void:
+	var total_repay := int(principal * (1.0 + interest_rate))
+	var monthly := int(ceil(float(total_repay) / repay_months))
+	loans.append({
+		"source": source,
+		"principal": principal,
+		"remaining": total_repay,
+		"monthly_payment": monthly,
+		"interest_rate": interest_rate,
+		"months_left": repay_months,
+	})
+	_update_loan_balance()
+
+
+## 月次の借入返済処理
+func _process_loan_payments() -> void:
+	var completed: Array[int] = []
+	for i in range(loans.size()):
+		var loan: Dictionary = loans[i]
+		var payment: int = loan["monthly_payment"]
+		cash -= payment
+		loan["remaining"] -= payment
+		loan["months_left"] -= 1
+		if loan["months_left"] <= 0 or loan["remaining"] <= 0:
+			completed.append(i)
+	# 完済したローンを除去（逆順で）
+	completed.reverse()
+	for idx in completed:
+		loans.remove_at(idx)
+	_update_loan_balance()
+
+
+## 月次返済額の合計を取得
+func get_monthly_loan_payment() -> int:
+	var total := 0
+	for loan in loans:
+		total += loan["monthly_payment"]
+	return total
+
+
+## 借入残高を更新
+func _update_loan_balance() -> void:
+	total_loan_balance = 0
+	for loan in loans:
+		total_loan_balance += loan["remaining"]
 
 
 ## イベント等でランダムメンバーを追加する

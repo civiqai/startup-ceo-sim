@@ -38,6 +38,15 @@ const TYPES := [
 		"cooldown": 3,
 		"variance": "medium",
 	},
+	{
+		"id": "factoring",
+		"name": "ファクタリング",
+		"icon": "💸",
+		"description": "売掛金を即現金化。手数料が高いが審査なし・即日入金。",
+		"color": Color(0.80, 0.30, 0.30),
+		"cooldown": 1,
+		"variance": "low",
+	},
 ]
 
 # --- Board squares per type (8 each) ---
@@ -86,11 +95,23 @@ const CROWDFUND_SQUARES := [
 	{"name": "コミュニティ形成", "icon": "🤝", "color": Color(0.45, 0.65, 0.70)},
 ]
 
+const FACTORING_SQUARES := [
+	{"name": "優良債権買取", "icon": "💎", "color": Color(0.95, 0.75, 0.15)},
+	{"name": "標準ファクタリング", "icon": "💸", "color": Color(0.50, 0.60, 0.50)},
+	{"name": "高手数料買取", "icon": "⚠️", "color": Color(0.80, 0.50, 0.25)},
+	{"name": "一括買取", "icon": "📦", "color": Color(0.40, 0.60, 0.70)},
+	{"name": "審査不通過", "icon": "❌", "color": Color(0.55, 0.40, 0.40)},
+	{"name": "悪質業者", "icon": "🦊", "color": Color(0.75, 0.25, 0.25)},
+	{"name": "即日入金", "icon": "⚡", "color": Color(0.35, 0.70, 0.55)},
+	{"name": "大口買取", "icon": "🏆", "color": Color(0.60, 0.50, 0.80)},
+]
+
 const _SQUARES_MAP := {
 	"angel": ANGEL_SQUARES,
 	"vc": VC_SQUARES,
 	"bank": BANK_SQUARES,
 	"crowdfund": CROWDFUND_SQUARES,
+	"factoring": FACTORING_SQUARES,
 }
 
 # Dice-sum-to-position mapping tables per type
@@ -100,6 +121,7 @@ const _DICE_MAP := {
 	"vc": {3: 4, 4: 4, 5: 4, 6: 5, 7: 5, 8: 2, 9: 2, 10: 1, 11: 1, 12: 1, 13: 3, 14: 3, 15: 6, 16: 6, 17: 7, 18: 7, 19: 0, 20: 0, 21: 0, 22: 0},
 	"bank": {3: 4, 4: 4, 5: 4, 6: 2, 7: 2, 8: 2, 9: 1, 10: 1, 11: 1, 12: 3, 13: 3, 14: 3, 15: 6, 16: 6, 17: 6, 18: 0},
 	"crowdfund": {3: 5, 4: 5, 5: 5, 6: 4, 7: 4, 8: 2, 9: 2, 10: 2, 11: 1, 12: 1, 13: 1, 14: 3, 15: 3, 16: 6, 17: 6, 18: 0, 19: 0, 20: 0},
+	"factoring": {3: 5, 4: 5, 5: 4, 6: 4, 7: 2, 8: 2, 9: 1, 10: 1, 11: 1, 12: 3, 13: 3, 14: 6, 15: 6, 16: 7, 17: 7, 18: 0},
 }
 
 
@@ -145,6 +167,8 @@ static func is_available(type_id: String, gs) -> bool:
 			return gs.month >= 6 and gs.revenue > 0
 		"crowdfund":
 			return gs.users >= 100 and gs.brand_value >= 10
+		"factoring":
+			return gs.revenue > 0  # 売上があれば利用可能（クールダウン短い）
 	return false
 
 
@@ -158,6 +182,8 @@ static func get_unlock_text(type_id: String) -> String:
 			return "6ヶ月目以降 & 売上あり"
 		"crowdfund":
 			return "ユーザー100人以上 & ブランド10以上"
+		"factoring":
+			return "売上あり"
 	return ""
 
 
@@ -180,6 +206,11 @@ static func dice_sum_to_position(type_id: String, dice_sum: int, gs) -> int:
 				modified += 1
 		"bank":
 			if gs.revenue >= 100:
+				modified += 1
+		"factoring":
+			if gs.revenue >= 200:
+				modified += 2
+			elif gs.revenue >= 50:
 				modified += 1
 
 	var map: Dictionary = _DICE_MAP.get(type_id, {})
@@ -315,42 +346,49 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 					return "資金 +%d万円、評判 +20、プロダクト力 +3（持株 %.1f%%）" % [amount, gs.equity_share]
 
 		"bank":
+			# 銀行融資: 金利3〜8%、12ヶ月返済。持株希釈なし。
 			match idx:
 				0: # 特別融資枠
 					var amount = mini(2000, cap)
 					gs.cash += amount
-					return "資金 +%d万円" % amount
+					gs.add_loan("銀行特別融資", amount, 0.03, 12)
+					return "融資 +%d万円（金利3%%/12ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.03 / 12.0))]
 				1: # 標準融資
 					var amount = mini(1000, cap)
 					gs.cash += amount
-					return "資金 +%d万円" % amount
+					gs.add_loan("銀行融資", amount, 0.05, 12)
+					return "融資 +%d万円（金利5%%/12ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.05 / 12.0))]
 				2: # 少額融資
 					var amount = mini(500, cap)
 					gs.cash += amount
-					return "資金 +%d万円" % amount
+					gs.add_loan("銀行融資", amount, 0.04, 6)
+					return "融資 +%d万円（金利4%%/6ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.04 / 6.0))]
 				3: # 好条件融資
 					var amount = mini(1500, cap)
 					gs.cash += amount
+					gs.add_loan("好条件融資", amount, 0.03, 12)
 					gs.reputation = mini(gs.reputation + 5, 100)
-					return "資金 +%d万円、評判 +5" % amount
+					return "融資 +%d万円（金利3%%/12ヶ月）、評判 +5" % amount
 				4: # 審査落ち
 					gs.team_morale = maxi(gs.team_morale - 3, 0)
 					return "審査落ち… 士気 -3"
 				5: # 担保要求
 					var amount = mini(1200, cap)
 					gs.cash += amount
+					gs.add_loan("担保付融資", amount, 0.06, 12)
 					gs.add_product_power(-3)
-					return "資金 +%d万円、プロダクト力 -3" % amount
+					return "融資 +%d万円（金利6%%/12ヶ月）、プロダクト力 -3" % amount
 				6: # 大口融資
 					var amount = mini(1800, cap)
 					gs.cash += amount
-					return "資金 +%d万円" % amount
+					gs.add_loan("大口融資", amount, 0.05, 18)
+					return "融資 +%d万円（金利5%%/18ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.05 / 18.0))]
 				7: # 信用枠拡大
 					var amount = mini(800, cap)
 					gs.cash += amount
-					# Reduce next bank cooldown by setting a flag (simplified: just give reputation)
+					gs.add_loan("信用枠融資", amount, 0.03, 6)
 					gs.reputation = mini(gs.reputation + 3, 100)
-					return "資金 +%d万円、信用力UP（評判 +3）" % amount
+					return "融資 +%d万円（金利3%%/6ヶ月）、評判 +3" % amount
 
 		"crowdfund":
 			match idx:
@@ -400,5 +438,50 @@ static func apply_effect(type_id: String, square_index: int, gs) -> String:
 					gs.team_morale = mini(gs.team_morale + 10, 100)
 					gs.brand_value = mini(gs.brand_value + 8, 100)
 					return "資金 +%d万円、ユーザー +300人、士気 +10、ブランド +8" % amount
+
+		"factoring":
+			# ファクタリング: 高手数料（10〜20%）、短期返済。即現金化。
+			var rev = maxi(gs.revenue, 50)
+			match idx:
+				0: # 優良債権買取
+					var amount = mini(rev * 3, cap)
+					gs.cash += amount
+					gs.add_loan("ファクタリング", amount, 0.10, 3)
+					return "即入金 +%d万円（手数料10%%/3ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.10 / 3.0))]
+				1: # 標準ファクタリング
+					var amount = mini(rev * 2, cap)
+					gs.cash += amount
+					gs.add_loan("ファクタリング", amount, 0.15, 3)
+					return "即入金 +%d万円（手数料15%%/3ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.15 / 3.0))]
+				2: # 高手数料買取
+					var amount = mini(rev * 2, cap)
+					gs.cash += amount
+					gs.add_loan("ファクタリング", amount, 0.20, 3)
+					return "即入金 +%d万円（手数料20%%/3ヶ月返済）⚠️高手数料" % amount
+				3: # 一括買取
+					var amount = mini(rev * 4, cap)
+					gs.cash += amount
+					gs.add_loan("ファクタリング", amount, 0.12, 6)
+					return "即入金 +%d万円（手数料12%%/6ヶ月返済、月%d万円）" % [amount, int(ceil(amount * 1.12 / 6.0))]
+				4: # 審査不通過
+					gs.team_morale = maxi(gs.team_morale - 3, 0)
+					return "売掛金が認められず不通過… 士気 -3"
+				5: # 悪質業者
+					var amount = mini(rev, cap)
+					gs.cash += amount
+					gs.add_loan("悪質ファクタリング", amount, 0.30, 3)
+					gs.reputation = maxi(gs.reputation - 5, 0)
+					return "即入金 +%d万円（手数料30%%！）評判 -5 ⚠️悪質業者" % amount
+				6: # 即日入金
+					var amount = mini(rev * 2, cap)
+					gs.cash += amount
+					gs.add_loan("ファクタリング", amount, 0.12, 3)
+					return "即日入金 +%d万円（手数料12%%/3ヶ月返済）" % amount
+				7: # 大口買取
+					var amount = mini(rev * 5, cap)
+					gs.cash += amount
+					gs.add_loan("大口ファクタリング", amount, 0.10, 6)
+					gs.reputation = mini(gs.reputation + 3, 100)
+					return "大口即入金 +%d万円（手数料10%%/6ヶ月）、信用力UP" % amount
 
 	return ""

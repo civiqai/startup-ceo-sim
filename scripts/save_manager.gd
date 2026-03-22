@@ -141,6 +141,7 @@ func _serialize() -> Dictionary:
 		"contract_work_name": GameState.contract_work_name,
 		"contract_work_reward": GameState.contract_work_reward,
 		"tutorial_month": GameState.tutorial_month,
+		"loans": GameState.loans.duplicate(true),
 		"members": members_data,
 		"product_manager": product_data,
 		"furniture_manager": FurnitureManager.serialize(),
@@ -165,6 +166,13 @@ func _deserialize(data: Dictionary) -> bool:
 	GameState.contract_work_name = str(data.get("contract_work_name", ""))
 	GameState.contract_work_reward = int(data.get("contract_work_reward", 0))
 	GameState.tutorial_month = int(data.get("tutorial_month", -1))
+
+	# 借入金の復元
+	GameState.loans.clear()
+	var loans_data: Array = data.get("loans", [])
+	for loan in loans_data:
+		GameState.loans.append(loan)
+	GameState._update_loan_balance()
 
 	# TeamManagerのメンバーを復元
 	TeamManager.members.clear()
