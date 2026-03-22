@@ -500,12 +500,13 @@ func _show_placement_overlay() -> void:
 	container.add_child(confirm_btn)
 	_placement_overlay.add_child(container)
 
-	# SubViewportContainer の親（Game シーン側）に追加
-	var target_parent := _get_overlay_parent()
-	if target_parent:
-		target_parent.add_child(_placement_overlay)
+	# CanvasLayerはシーンツリーのルート付近に追加（SubViewport内では表示されない）
+	var game_node := _get_game_node()
+	if game_node:
+		game_node.add_child(_placement_overlay)
 	else:
-		add_child(_placement_overlay)
+		# フォールバック: ツリーのルートに追加
+		get_tree().root.add_child(_placement_overlay)
 
 
 ## 配置オーバーレイを非表示にする
@@ -562,14 +563,13 @@ func _get_camera() -> Camera2D:
 	return null
 
 
-## オーバーレイの親ノード（SubViewportContainer の親）を取得する
-func _get_overlay_parent() -> Node:
-	# OfficeTilemap → SubViewport → SubViewportContainer → 親
-	var node := get_parent()
-	while node:
-		if node.get_parent() and not node.get_parent() is SubViewport:
-			return node.get_parent()
-		node = node.get_parent()
+## Game ノードを取得する（CanvasLayer の追加先として使用）
+func _get_game_node() -> Node:
+	# Main/Game パスで探す
+	if get_tree():
+		var game := get_tree().root.get_node_or_null("Main/Game")
+		if game:
+			return game
 	return null
 
 

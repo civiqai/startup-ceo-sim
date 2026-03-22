@@ -443,47 +443,39 @@ func _build_camera_controls() -> void:
 
 
 func _build_shop_button() -> void:
-	# 右上にHBoxContainerで家具・拡張ボタンを並べる
-	var hbox := HBoxContainer.new()
-	hbox.name = "OfficeButtons"
-	hbox.add_theme_constant_override("separation", 6)
-	# 右上固定
-	hbox.position = Vector2(office_viewport_container.size.x - 220, 4)
-	hbox.size = Vector2(212, 36)
-
 	var btn := Button.new()
 	btn.name = "ShopButton"
 	btn.text = "🛒 家具"
-	btn.custom_minimum_size = Vector2(100, 36)
-	btn.add_theme_font_size_override("font_size", 14)
+	btn.custom_minimum_size = Vector2(100, 44)
+	btn.add_theme_font_size_override("font_size", 16)
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.18, 0.48, 0.32, 0.9)
 	style.set_corner_radius_all(6)
 	style.content_margin_left = 8.0
 	style.content_margin_right = 8.0
-	style.content_margin_top = 2.0
-	style.content_margin_bottom = 2.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
 	btn.add_theme_stylebox_override("normal", style)
+	btn.position = Vector2(8, 36)
 	btn.pressed.connect(_on_shop_button_pressed)
-	hbox.add_child(btn)
+	office_viewport_container.add_child(btn)
 
 	var expand_btn := Button.new()
 	expand_btn.name = "ExpandButton"
 	expand_btn.text = "🏗️ 拡張"
-	expand_btn.custom_minimum_size = Vector2(100, 36)
-	expand_btn.add_theme_font_size_override("font_size", 14)
+	expand_btn.custom_minimum_size = Vector2(100, 44)
+	expand_btn.add_theme_font_size_override("font_size", 16)
 	var expand_style := StyleBoxFlat.new()
 	expand_style.bg_color = Color(0.45, 0.35, 0.15, 0.9)
 	expand_style.set_corner_radius_all(6)
 	expand_style.content_margin_left = 8.0
 	expand_style.content_margin_right = 8.0
-	expand_style.content_margin_top = 2.0
-	expand_style.content_margin_bottom = 2.0
+	expand_style.content_margin_top = 4.0
+	expand_style.content_margin_bottom = 4.0
 	expand_btn.add_theme_stylebox_override("normal", expand_style)
+	expand_btn.position = Vector2(116, 36)
 	expand_btn.pressed.connect(_on_expand_button_pressed)
-	hbox.add_child(expand_btn)
-
-	office_viewport_container.add_child(hbox)
+	office_viewport_container.add_child(expand_btn)
 
 
 func _move_office_camera(offset: Vector2) -> void:
@@ -1416,9 +1408,9 @@ func _trigger_quarterly_event() -> void:
 # --- 家具ショップ/配置コールバック ---
 
 func _on_shop_button_pressed() -> void:
-	if GameState.tutorial_month >= 0:
-		_add_log("[color=#E85555]チュートリアル完了後に利用できます。[/color]")
-		return
+	#if GameState.tutorial_month >= 0:
+	#	_add_log("[color=#E85555]チュートリアル完了後に利用できます。[/color]")
+	#	return
 	AudioManager.play_sfx("click")
 	furniture_shop_popup.show_shop()
 
@@ -1478,9 +1470,9 @@ func _on_furniture_detail_closed() -> void:
 
 
 func _on_expand_button_pressed() -> void:
-	if GameState.tutorial_month >= 0:
-		_add_log("[color=#E85555]チュートリアル完了後に利用できます。[/color]")
-		return
+	#if GameState.tutorial_month >= 0:
+	#	_add_log("[color=#E85555]チュートリアル完了後に利用できます。[/color]")
+	#	return
 	AudioManager.play_sfx("click")
 	office_expansion_popup.show_popup()
 
