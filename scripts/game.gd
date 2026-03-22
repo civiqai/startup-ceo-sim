@@ -39,25 +39,26 @@ var office_expansion_popup: Node
 var monthly_log: Array[Dictionary] = []
 var _current_month_events: Array = []
 
-@onready var month_label := $VBox/Header/HBox/MonthLabel
-@onready var cash_label := $VBox/Header/HBox/CashLabel
-@onready var office_view := $VBox/OfficeView
-@onready var log_label := $VBox/LogTicker/LogPanel/LogLabel
-@onready var log_expand_btn := $VBox/LogTicker/ExpandBtn
+@onready var month_label := $SafeArea/VBox/Header/HBox/MonthLabel
+@onready var cash_label := $SafeArea/VBox/Header/HBox/CashLabel
+@onready var office_view := $SafeArea/VBox/OfficeView
+@onready var log_label := $SafeArea/VBox/LogTicker/LogPanel/LogLabel
+@onready var log_expand_btn := $SafeArea/VBox/LogTicker/ExpandBtn
 var _log_expanded := false
-@onready var action_btn := $VBox/ActionBar/HBox/ActionBtn
-@onready var team_btn := $VBox/ActionBar/HBox/TeamBtn
-@onready var day_label := $VBox/Header/HBox/DayLabel
-@onready var speed_bar := $VBox/SpeedBar
+@onready var action_btn := $SafeArea/VBox/ActionBar/HBox/ActionBtn
+@onready var team_btn := $SafeArea/VBox/ActionBar/HBox/TeamBtn
+@onready var day_label := $SafeArea/VBox/Header/HBox/DayLabel
+@onready var speed_bar := $SafeArea/VBox/SpeedBar
 var event_popup: Node
 var _pending_marketing_result: Dictionary = {}
 var _pending_contract_selection: bool = false
+var _is_emergency_fundraise: bool = false
 
 # TileMapオフィス関連
-@onready var office_viewport_container := $VBox/OfficeViewport
-@onready var office_viewport := $VBox/OfficeViewport/SubViewport
-@onready var office_tilemap := $VBox/OfficeViewport/SubViewport/OfficeTilemap
-@onready var office_camera := $VBox/OfficeViewport/SubViewport/Camera
+@onready var office_viewport_container := $SafeArea/VBox/OfficeViewport
+@onready var office_viewport := $SafeArea/VBox/OfficeViewport/SubViewport
+@onready var office_tilemap := $SafeArea/VBox/OfficeViewport/SubViewport/OfficeTilemap
+@onready var office_camera := $SafeArea/VBox/OfficeViewport/SubViewport/Camera
 var office_ui_overlay: Node = null
 var _use_tilemap_office := true  # TileMapオフィスの有効/無効切替
 
@@ -104,7 +105,7 @@ func _ready() -> void:
 
 	GameState.game_over.connect(_on_game_over)
 	GameState.game_clear.connect(_on_game_clear)
-	GameState.emergency_fundraise_triggered.connect(_on_emergency_fundraise)
+	GameState.emergency_fundraise_requested.connect(_on_emergency_fundraise_requested)
 	GameState.headhunt_occurred.connect(_on_headhunt_occurred)
 
 	# アクションメニューポップアップ（CanvasLayer）
@@ -501,12 +502,6 @@ func _do_action(action: String) -> void:
 			action_btn.disabled = false
 			return
 
-	# チャレンジモードのアクション制限
-	if not DifficultyManager.is_action_allowed(action):
-		_add_log("[color=#E85555]このチャレンジではそのアクションは使えません。[/color]")
-		action_btn.disabled = false
-		return
-
 	if action == "history":
 		history_popup.show_history(monthly_log)
 		action_btn.disabled = false
@@ -592,6 +587,10 @@ func _on_fundraise_type_selected(type_id: String) -> void:
 
 
 func _on_fundraise_cancelled() -> void:
+	if _is_emergency_fundraise:
+		_is_emergency_fundraise = false
+		GameState.fail_emergency_fundraise()
+		return
 	action_btn.disabled = false
 
 
@@ -625,6 +624,11 @@ func _on_sugoroku_closed(result_text: String) -> void:
 	var type_data = FundraiseTypes.get_type(type_id)
 	var log_msg = "🎲 %s: 【%s】→ %s" % [type_data.get("name", ""), square.get("name", ""), result_text]
 	_update_ui()
+	if _is_emergency_fundraise:
+		_is_emergency_fundraise = false
+		_add_log("[color=#FFD966]⚠️ 緊急資金調達: %s[/color]" % log_msg)
+		GameState.complete_emergency_fundraise()
+		return
 	turn_manager.execute_turn_with_result(log_msg)
 
 
@@ -1132,6 +1136,11 @@ func _on_turn_ended() -> void:
 	var comp_news = competitor_manager.advance_month(GameState)
 	for news in comp_news:
 		_add_log("[color=#7799BB]📰 %s[/color]" % news)
+	# 競合によるユーザー奪取
+	var comp_lost: int = competitor_manager.monthly_competitive_pressure(GameState)
+	if comp_lost > 0:
+		GameState.users = maxi(GameState.users - comp_lost, 0)
+		_add_log("[color=#DD7755]📉 競合にユーザーを奪われた（-%d人）[/color]" % comp_lost)
 	# 競争イベントチェック
 	var comp_event = competitor_manager.check_competitive_events(GameState)
 	if not comp_event.is_empty():
@@ -1140,11 +1149,6 @@ func _on_turn_ended() -> void:
 		var effect_val = comp_event.get("value", 0)
 		if effect_type == "reputation":
 			GameState.reputation = clampi(GameState.reputation + effect_val, 0, 100)
-
-	# スピードランタイムリミットチェック
-	if DifficultyManager.check_time_limit(GameState):
-		GameState.game_over.emit("タイムリミット！12ヶ月以内にIPOできなかった…")
-		return
 
 	# 特殊エンディングチェック
 	var special_endings = ending_manager.check_special_endings(GameState)
@@ -1428,10 +1432,11 @@ func _on_tech_debt_warning(debt_level: int) -> void:
 	_add_log("[color=#E85555]⚠️ 技術的負債が危険水準に！(%d/100)[/color]" % debt_level)
 
 
-func _on_emergency_fundraise(amount: int, dilution: float) -> void:
-	AudioManager.play_sfx("notification")
-	_add_log("[color=#FFD966]⚠️ 資金が底をつきそうに！緊急資金調達を実施しました。[/color]")
-	_add_log("[color=#FFD966]💵 調達額: %d万円（持株 -%.1f%%）[/color]" % [amount, dilution])
+func _on_emergency_fundraise_requested() -> void:
+	AudioManager.play_sfx("negative")
+	_add_log("[color=#E85555]⚠️ 資金が底をつきそうです！緊急資金調達が必要です！[/color]")
+	_is_emergency_fundraise = true
+	fundraise_select_popup.show_selection(true)
 	_update_ui()
 
 
@@ -1539,6 +1544,8 @@ func _update_ui() -> void:
 		action_menu_popup.update_hire_btn()
 		action_menu_popup.update_fundraise_btn(GameState.fundraise_cooldown)
 		action_menu_popup.update_contract_state(GameState)
+		# フェーズゲート（マーケティング・資金調達のアンロック制限）
+		action_menu_popup.update_phase_state(GameState.current_phase)
 		# プロダクト作成ボタン状態更新
 		var active_products = product_manager.get_active_products()
 		var has_pm = TeamManager.has_cxo("pm") or not TeamManager.get_members_by_skill("pm").is_empty()

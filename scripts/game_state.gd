@@ -4,7 +4,7 @@ extends Node
 signal state_changed
 signal game_over(reason: String)
 signal game_clear(reason: String)
-signal emergency_fundraise_triggered(amount: int, dilution: float)
+signal emergency_fundraise_requested
 signal training_completed(member, training_id: String)
 signal headhunt_occurred(member, offer_salary: int)
 
@@ -67,6 +67,7 @@ var brand_value: int = 0       # ブランド価値 (0-100)
 var fundraise_cooldown: int = 0 # 資金調達クールダウン残り月数
 var total_raised: int = 0       # 累計調達額
 var fundraise_count: int = 0    # 調達回数
+var marketing_channel_counts: Dictionary = {}  # チャネル別マーケ実行回数
 var equity_share: float = 100.0  # 持ち株比率 (%) - 初期100%
 
 # 借入金（銀行融資・ファクタリング）
@@ -111,7 +112,9 @@ var team_size: int:
 # 月間コスト: 社長50万 + メンバーの給与合計
 var monthly_cost: int:
 	get:
-		return 50 + TeamManager.get_total_monthly_cost()
+		var base: int = 50 + TeamManager.get_total_monthly_cost()
+		var infra_cost: int = users / 100
+		return base + infra_cost
 
 # 月間売上（MRR）
 # ユーザー数 × ARPU（利益率+UXで決まる単価） × ブランド倍率
@@ -127,11 +130,12 @@ var revenue: int:
 # 時価総額
 var valuation: int:
 	get:
-		var product_component = users * product_power
-		var brand_component = brand_value * brand_value * 2
-		var revenue_component = revenue * 120
-		var reputation_component = maxi(reputation - 30, 0) * 100  # 30以下では寄与しない
-		return product_component + brand_component + revenue_component + reputation_component
+		var product_component: int = users * product_power
+		var brand_component: int = brand_value * brand_value * 5
+		var revenue_component: int = revenue * 40
+		var reputation_component: int = maxi(reputation - 30, 0) * 300
+		var team_component: int = team_size * team_size * 50
+		return product_component + brand_component + revenue_component + reputation_component + team_component
 
 # 最大調達可能額
 var max_fundraise_amount: int:
@@ -160,6 +164,7 @@ func reset() -> void:
 	fundraise_cooldown = 0
 	total_raised = 0
 	fundraise_count = 0
+	marketing_channel_counts.clear()
 	equity_share = 100.0
 	loans.clear()
 	total_loan_balance = 0
@@ -247,6 +252,11 @@ func advance_month() -> void:
 			var p_ux = p.get("ux", 0)
 			p["users"] = p.get("users", 0) + p_awareness * p_ux / 50
 	users += product_awareness * product_ux / 50
+	# 月次チャーン（ユーザー離脱）
+	if users > 0:
+		var churn_rate: float = maxf(0.05 - product_power * 0.0003, 0.01)
+		var churned: int = int(users * churn_rate)
+		users = maxi(users - churned, 0)
 	# ブランド自然減衰
 	if brand_value >= 20:
 		brand_value -= 1
@@ -283,11 +293,10 @@ func advance_month() -> void:
 	})
 
 	if cash <= 0:
-		# 緊急資金調達フォールバック: 資金調達が可能なら倒産前に救済
-		var emergency_amount := _try_emergency_fundraise()
-		if emergency_amount > 0:
-			cash += emergency_amount
+		# 緊急資金調達: プレイヤーに選択させる
+		if _can_emergency_fundraise():
 			state_changed.emit()
+			emergency_fundraise_requested.emit()
 			return
 		cash = 0
 		state_changed.emit()
@@ -302,37 +311,35 @@ func advance_month() -> void:
 	state_changed.emit()
 
 
-## 緊急資金調達を試みる（倒産回避フォールバック）
-## エクイティ調達 → 緊急借入（高金利）の順で試行する
-## 成功時は調達額を返す、不可能なら0を返す
-func _try_emergency_fundraise() -> int:
-	# チャレンジモードで資金調達が禁止されている場合は不可
-	if DifficultyManager.is_action_allowed("fundraise") == false:
-		return 0
+## 緊急資金調達が可能かどうかを判定する
+func _can_emergency_fundraise() -> bool:
+	# いずれかの資金調達タイプが利用可能なら true
+	var FundraiseTypes = preload("res://scripts/fundraise_types.gd")
+	for type_data in FundraiseTypes.get_all_types():
+		if FundraiseTypes.is_available(type_data["id"], self):
+			return true
+	return false
 
-	# 1. エクイティ調達を試みる（クールダウンなし＋持株10%超）
-	if fundraise_cooldown == 0 and equity_share > 10.0 and contract_work_remaining == 0:
-		var raise_amount := maxi(200, valuation / 20)
-		var dilution := clampf(float(raise_amount) / maxf(float(valuation), 1000.0) * 100.0, 2.0, 15.0)
-		equity_share = maxf(equity_share - dilution, 5.0)
-		fundraise_cooldown = 2
-		fundraise_count += 1
-		total_raised += raise_amount
-		emergency_fundraise_triggered.emit(raise_amount, dilution)
-		return raise_amount
 
-	# 2. 緊急借入（ファクタリング的な高金利短期借入）
-	#    クールダウン中でも利用可能、借入残高が売上の12ヶ月分以下なら
-	var max_borrow := maxi(500, revenue * 3)  # 月商の3倍まで
-	if total_loan_balance < max_borrow:
-		var borrow_amount := maxi(300, monthly_cost + abs(cash))  # 赤字を補填+α
-		borrow_amount = mini(borrow_amount, max_borrow - total_loan_balance)
-		# 高金利（年利20%相当）、6ヶ月返済
-		add_loan("緊急ファクタリング", borrow_amount, 0.10, 6)
-		emergency_fundraise_triggered.emit(borrow_amount, 0.0)
-		return borrow_amount
+## 緊急資金調達後の処理（双六完了後にgame.gdから呼ばれる）
+func complete_emergency_fundraise() -> void:
+	if cash <= 0:
+		cash = 0
+		state_changed.emit()
+		game_over.emit("資金がゼロになりました…倒産です。")
+		return
+	if valuation >= IPO_THRESHOLD:
+		state_changed.emit()
+		game_clear.emit("時価総額100億円達成！IPOおめでとうございます！")
+		return
+	state_changed.emit()
 
-	return 0
+
+## 緊急資金調達を拒否した場合（game.gdから呼ばれる）
+func fail_emergency_fundraise() -> void:
+	cash = 0
+	state_changed.emit()
+	game_over.emit("資金がゼロになりました…倒産です。")
 
 
 ## 借入金を追加する（銀行融資・ファクタリング用）
