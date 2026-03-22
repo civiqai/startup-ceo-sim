@@ -1,4 +1,3 @@
-class_name FurnitureData
 extends Node
 ## オフィス家具データ定義（Autoloadシングルトン）
 ## 全30種の家具アイテムとカテゴリ情報を管理する

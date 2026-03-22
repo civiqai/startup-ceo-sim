@@ -1,4 +1,3 @@
-class_name OfficeBuffManager
 extends Node
 
 ## オフィス家具によるバフ/効果の計算・適用を管理するシングルトン

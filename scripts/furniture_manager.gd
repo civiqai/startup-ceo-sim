@@ -1,4 +1,3 @@
-class_name FurnitureManager
 extends Node
 ## 家具配置状態管理シングルトン
 ## オフィスグリッド上の家具の購入・配置・移動・売却を管理する

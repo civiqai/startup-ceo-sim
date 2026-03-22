@@ -1,4 +1,3 @@
-class_name OfficeExpansionManager
 extends Node
 
 ## オフィスエリア拡張管理シングルトン
