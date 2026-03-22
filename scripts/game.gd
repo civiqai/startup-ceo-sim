@@ -511,7 +511,7 @@ func _refresh_tilemap_office() -> void:
 	if not _use_tilemap_office or office_tilemap == null:
 		return
 	var phase := _get_current_phase_index()
-	var old_size := office_tilemap.get_room_size()
+	var old_size: Vector2i = office_tilemap.get_room_size()
 	office_tilemap.build_office(phase)
 	if office_tilemap.get_room_size() != old_size:
 		_update_office_camera_bounds()

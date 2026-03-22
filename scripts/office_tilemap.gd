@@ -156,7 +156,7 @@ func _setup_layers() -> void:
 func build_office(phase: int) -> void:
 	phase = clampi(phase, 0, ROOM_SIZES.size() - 1)
 
-	var target_size := ROOM_SIZES[phase]
+	var target_size: Vector2i = ROOM_SIZES[phase]
 	if get_tree() and get_tree().root.has_node("OfficeExpansionManager"):
 		target_size += OfficeExpansionManager.get_total_size_bonus()
 	if phase == _current_phase and target_size == _current_room_size:
