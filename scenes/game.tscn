@@ -1,8 +1,11 @@
-[gd_scene load_steps=6 format=3 uid="uid://game"]
+[gd_scene load_steps=9 format=3 uid="uid://game"]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1"]
 [ext_resource type="Theme" path="res://resources/theme.tres" id="2"]
 [ext_resource type="Script" path="res://scripts/office_view.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/office_tilemap.gd" id="office_tilemap"]
+[ext_resource type="Script" path="res://scripts/office_camera.gd" id="office_camera"]
+[ext_resource type="Script" path="res://scripts/office_ui_overlay.gd" id="office_ui_overlay"]
 [ext_resource type="Texture2D" path="res://assets/images/ui/kenney/panels/input_rectangle.png" id="header_tex"]
 
 [sub_resource type="StyleBoxTexture" id="header_style"]
@@ -70,9 +73,29 @@ horizontal_alignment = 2
 [node name="OfficeView" type="Control" parent="VBox"]
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(0, 400)
+custom_minimum_size = Vector2(0, 200)
 mouse_filter = 0
 script = ExtResource("3")
+
+[node name="OfficeViewport" type="SubViewportContainer" parent="VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+custom_minimum_size = Vector2(0, 200)
+stretch = true
+stretch_shrink = 1
+visible = false
+
+[node name="SubViewport" type="SubViewport" parent="VBox/OfficeViewport"]
+handle_input_locally = true
+size = Vector2i(720, 400)
+render_target_update_mode = 4
+
+[node name="OfficeTilemap" type="Node2D" parent="VBox/OfficeViewport/SubViewport"]
+script = ExtResource("office_tilemap")
+
+[node name="Camera" type="Camera2D" parent="VBox/OfficeViewport/SubViewport"]
+script = ExtResource("office_camera")
 
 [node name="SpeedBar" type="HBoxContainer" parent="VBox"]
 layout_mode = 2

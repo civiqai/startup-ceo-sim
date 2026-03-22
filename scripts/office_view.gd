@@ -48,6 +48,9 @@ var _product_area_y: float = 0.0
 var _product_area_h: float = 150.0
 var _swipe_anim_offset: float = 0.0
 
+# TileMapオフィスモード: 部屋とメンバー描画をスキップし、ステータスのみ表示
+var tilemap_mode: bool = false
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -92,6 +95,18 @@ func _draw() -> void:
 	var h: float = rect.size.y
 	var font: Font = ThemeDB.fallback_font
 	_member_rects.clear()
+
+	if tilemap_mode:
+		# TileMapモード: プロダクト・ゲージのみ描画（部屋・メンバーはTileMap側）
+		var y_cursor := 4.0
+		var pm = get_node_or_null("/root/Main/Game/ProductManager")
+		if pm:
+			y_cursor = _draw_products_section(w, y_cursor, font, pm)
+		y_cursor += 4
+		y_cursor = _draw_company_section(w, y_cursor, font)
+		return
+
+	# --- 以下、従来モード（部屋背景 + メンバー + ステータス） ---
 
 	# 部屋背景の高さ: コントロール全体からゲージ領域を引いた分（最低ROOM_HEIGHT_MIN）
 	var room_h := maxi(int(h - GAUGES_HEIGHT), ROOM_HEIGHT_MIN)

@@ -31,6 +31,10 @@ SaveManager="*res://scripts/save_manager.gd"
 DifficultyManager="*res://scripts/difficulty_manager.gd"
 KenneyTheme="*res://scripts/kenney_theme.gd"
 AvatarLoader="*res://scripts/avatar_loader.gd"
+FurnitureData="*res://scripts/furniture_data.gd"
+OfficeBuffManager="*res://scripts/office_buff_manager.gd"
+FurnitureManager="*res://scripts/furniture_manager.gd"
+OfficeExpansionManager="*res://scripts/office_expansion_manager.gd"
 
 [gui]
 

@@ -30,6 +30,10 @@ var ending_manager: Node
 var create_product_popup: Node
 var action_menu_popup: Node
 var history_popup: Node
+var furniture_shop_popup: Node
+var furniture_detail_popup: Node
+var furniture_placement: Node  # FurniturePlacement node on OfficeTilemap
+var office_expansion_popup: Node
 var monthly_log: Array[Dictionary] = []
 var _current_month_events: Array = []
 
@@ -46,6 +50,14 @@ var _log_expanded := false
 var event_popup: Node
 var _pending_marketing_result: Dictionary = {}
 var _pending_contract_selection: bool = false
+
+# TileMapオフィス関連
+@onready var office_viewport_container := $VBox/OfficeViewport
+@onready var office_viewport := $VBox/OfficeViewport/SubViewport
+@onready var office_tilemap := $VBox/OfficeViewport/SubViewport/OfficeTilemap
+@onready var office_camera := $VBox/OfficeViewport/SubViewport/Camera
+var office_ui_overlay: Node = null
+var _use_tilemap_office := true  # TileMapオフィスの有効/無効切替
 
 
 func _ready() -> void:
@@ -247,8 +259,38 @@ func _ready() -> void:
 	history_popup.set_script(HistoryPopupScript)
 	add_child(history_popup)
 
+	# 家具ショップポップアップ
+	var FurnitureShopScript = load("res://scripts/furniture_shop_popup.gd")
+	furniture_shop_popup = CanvasLayer.new()
+	furniture_shop_popup.set_script(FurnitureShopScript)
+	add_child(furniture_shop_popup)
+	furniture_shop_popup.furniture_purchased.connect(_on_furniture_purchased)
+	furniture_shop_popup.placement_requested.connect(_on_furniture_placement_requested)
+	furniture_shop_popup.popup_closed.connect(_on_furniture_shop_closed)
+
+	# 家具詳細ポップアップ
+	var FurnitureDetailScript = load("res://scripts/furniture_detail_popup.gd")
+	furniture_detail_popup = CanvasLayer.new()
+	furniture_detail_popup.set_script(FurnitureDetailScript)
+	add_child(furniture_detail_popup)
+	furniture_detail_popup.furniture_sold.connect(_on_furniture_sold)
+	furniture_detail_popup.furniture_moved.connect(_on_furniture_move_requested)
+	furniture_detail_popup.furniture_upgraded.connect(_on_furniture_upgraded)
+	furniture_detail_popup.popup_closed.connect(_on_furniture_detail_closed)
+
+	# オフィス拡張ポップアップ
+	var ExpansionPopupScript = load("res://scripts/office_expansion_popup.gd")
+	office_expansion_popup = CanvasLayer.new()
+	office_expansion_popup.set_script(ExpansionPopupScript)
+	add_child(office_expansion_popup)
+	office_expansion_popup.zone_purchased.connect(_on_zone_purchased)
+	office_expansion_popup.popup_closed.connect(_on_expansion_popup_closed)
+
 	# オフィスビューのメンバータップ → 詳細ポップアップ
 	office_view.member_tapped.connect(_on_team_member_selected)
+
+	# TileMapオフィスの初期化
+	_setup_tilemap_office()
 
 	_add_log("さあ、経営を始めよう！")
 	_update_ui()
@@ -262,6 +304,222 @@ func _ready() -> void:
 
 	# デバッグパネルを追加
 	_setup_debug_panel()
+
+
+func _setup_tilemap_office() -> void:
+	if not _use_tilemap_office:
+		return
+	if office_tilemap == null or office_camera == null:
+		push_warning("TileMapオフィスノードが見つかりません。従来のOfficeViewを使用します。")
+		_use_tilemap_office = false
+		return
+
+	# 旧OfficeViewをステータス表示専用モードにし、新TileMapオフィスを有効化
+	office_view.tilemap_mode = true
+	office_view.custom_minimum_size = Vector2(0, 180)  # ステータス分のみ
+	office_viewport_container.visible = true
+	print("[TileMapOffice] setup: viewport_container=%s, tilemap=%s, camera=%s" % [office_viewport_container, office_tilemap, office_camera])
+	print("[TileMapOffice] viewport size=%s, container size=%s" % [office_viewport.size, office_viewport_container.size])
+
+	# TileMapオフィスを構築
+	var phase := _get_current_phase_index()
+	office_tilemap.build_office(phase)
+	office_tilemap.update_members()
+	print("[TileMapOffice] build_office phase=%d, room_px=%s" % [phase, office_tilemap.get_room_pixel_size()])
+
+	# カメラの境界をオフィスサイズに合わせる
+	_update_office_camera_bounds()
+	print("[TileMapOffice] camera pos=%s, zoom=%s, bounds=%s" % [office_camera.position, office_camera.zoom, office_camera.map_bounds])
+
+	# メンバータップシグナルを接続
+	office_tilemap.member_tapped.connect(_on_team_member_selected)
+
+	# UIオーバーレイは一旦無効（既存のVBox内UIと重複するため）
+	# TODO: Phase 2でオフィス専用画面として独立させる際に有効化
+	#var OverlayScript = load("res://scripts/office_ui_overlay.gd")
+	#office_ui_overlay = CanvasLayer.new()
+	#office_ui_overlay.set_script(OverlayScript)
+	#add_child(office_ui_overlay)
+
+	# カメラ操作ボタンを追加（矢印 + ズーム）
+	_build_camera_controls()
+
+	# 家具配置システムのセットアップ
+	var FurniturePlacementScript = load("res://scripts/furniture_placement.gd")
+	furniture_placement = Node2D.new()
+	furniture_placement.set_script(FurniturePlacementScript)
+	office_tilemap.add_child(furniture_placement)
+	furniture_placement.placement_completed.connect(_on_furniture_placement_completed)
+	furniture_placement.placement_cancelled.connect(_on_furniture_placement_cancelled)
+	furniture_placement.furniture_tapped.connect(_on_furniture_tapped)
+	# 配置済み家具をレンダリング
+	furniture_placement.render_all_furniture()
+
+	# 家具ショップボタン（オフィスビューポートの左下に配置）
+	_build_shop_button()
+
+
+func _update_office_camera_bounds() -> void:
+	if office_camera == null or office_tilemap == null:
+		return
+	var room_px: Vector2 = office_tilemap.get_room_pixel_size()
+	# 部屋の範囲 + 大きめの余白（スクロール自由度のため）
+	var margin := maxf(200.0, room_px.x)
+	office_camera.map_bounds = Rect2(
+		-margin, -margin,
+		room_px.x + margin * 2, room_px.y + margin * 2
+	)
+	# カメラを部屋の中央に移動
+	office_camera.position = room_px / 2.0
+
+	# デフォルトズーム: タイルが見やすいサイズに拡大
+	var default_zoom := 2.0
+	office_camera.zoom = Vector2(default_zoom, default_zoom)
+
+
+func _build_camera_controls() -> void:
+	if office_camera == null:
+		return
+	# 右側に縦並びのカメラ操作ボタン群を配置
+	var panel := VBoxContainer.new()
+	panel.name = "CameraControls"
+	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.position = Vector2(office_viewport_container.size.x - 60, 80)
+	panel.add_theme_constant_override("separation", 2)
+
+	var btn_size := Vector2(44, 44)
+	var btn_font_size := 20
+
+	var zoom_in_btn := Button.new()
+	zoom_in_btn.text = "+"
+	zoom_in_btn.custom_minimum_size = btn_size
+	zoom_in_btn.add_theme_font_size_override("font_size", btn_font_size)
+	zoom_in_btn.pressed.connect(func(): office_camera._smooth_zoom(0.15))
+	panel.add_child(zoom_in_btn)
+
+	var zoom_out_btn := Button.new()
+	zoom_out_btn.text = "-"
+	zoom_out_btn.custom_minimum_size = btn_size
+	zoom_out_btn.add_theme_font_size_override("font_size", btn_font_size)
+	zoom_out_btn.pressed.connect(func(): office_camera._smooth_zoom(-0.15))
+	panel.add_child(zoom_out_btn)
+
+	var sep := Control.new()
+	sep.custom_minimum_size = Vector2(0, 4)
+	panel.add_child(sep)
+
+	var up_btn := Button.new()
+	up_btn.text = "▲"
+	up_btn.custom_minimum_size = btn_size
+	up_btn.add_theme_font_size_override("font_size", btn_font_size)
+	up_btn.pressed.connect(func(): _move_office_camera(Vector2(0, -32)))
+	panel.add_child(up_btn)
+
+	var h_row := HBoxContainer.new()
+	h_row.add_theme_constant_override("separation", 2)
+	var left_btn := Button.new()
+	left_btn.text = "◀"
+	left_btn.custom_minimum_size = btn_size
+	left_btn.add_theme_font_size_override("font_size", btn_font_size)
+	left_btn.pressed.connect(func(): _move_office_camera(Vector2(-32, 0)))
+	h_row.add_child(left_btn)
+	var right_btn := Button.new()
+	right_btn.text = "▶"
+	right_btn.custom_minimum_size = btn_size
+	right_btn.add_theme_font_size_override("font_size", btn_font_size)
+	right_btn.pressed.connect(func(): _move_office_camera(Vector2(32, 0)))
+	h_row.add_child(right_btn)
+	panel.add_child(h_row)
+
+	var down_btn := Button.new()
+	down_btn.text = "▼"
+	down_btn.custom_minimum_size = btn_size
+	down_btn.add_theme_font_size_override("font_size", btn_font_size)
+	down_btn.pressed.connect(func(): _move_office_camera(Vector2(0, 32)))
+	panel.add_child(down_btn)
+
+	office_viewport_container.add_child(panel)
+
+
+func _build_shop_button() -> void:
+	var btn := Button.new()
+	btn.name = "ShopButton"
+	btn.text = "🛒 家具"
+	btn.custom_minimum_size = Vector2(100, 44)
+	btn.add_theme_font_size_override("font_size", 16)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.18, 0.48, 0.32, 0.9)
+	style.corner_radius_top_left = 6
+	style.corner_radius_top_right = 6
+	style.corner_radius_bottom_left = 6
+	style.corner_radius_bottom_right = 6
+	style.content_margin_left = 8.0
+	style.content_margin_right = 8.0
+	style.content_margin_top = 4.0
+	style.content_margin_bottom = 4.0
+	btn.add_theme_stylebox_override("normal", style)
+	btn.position = Vector2(8, 36)
+	btn.pressed.connect(_on_shop_button_pressed)
+	office_viewport_container.add_child(btn)
+
+	var expand_btn := Button.new()
+	expand_btn.name = "ExpandButton"
+	expand_btn.text = "🏗️ 拡張"
+	expand_btn.custom_minimum_size = Vector2(100, 44)
+	expand_btn.add_theme_font_size_override("font_size", 16)
+	var expand_style := StyleBoxFlat.new()
+	expand_style.bg_color = Color(0.45, 0.35, 0.15, 0.9)
+	expand_style.corner_radius_top_left = 6
+	expand_style.corner_radius_top_right = 6
+	expand_style.corner_radius_bottom_left = 6
+	expand_style.corner_radius_bottom_right = 6
+	expand_style.content_margin_left = 8.0
+	expand_style.content_margin_right = 8.0
+	expand_style.content_margin_top = 4.0
+	expand_style.content_margin_bottom = 4.0
+	expand_btn.add_theme_stylebox_override("normal", expand_style)
+	expand_btn.position = Vector2(116, 36)
+	expand_btn.pressed.connect(_on_expand_button_pressed)
+	office_viewport_container.add_child(expand_btn)
+
+
+func _move_office_camera(offset: Vector2) -> void:
+	if office_camera == null:
+		return
+	office_camera.position += offset / office_camera.zoom
+	office_camera._clamp_position()
+
+
+func _get_current_phase_index() -> int:
+	var team = GameState.team_size
+	if team <= 3:
+		return 0
+	elif team <= 6:
+		return 1
+	elif team <= 10:
+		return 2
+	elif team <= 15:
+		return 3
+	elif team <= 25:
+		return 4
+	else:
+		return 5
+
+
+func _refresh_tilemap_office() -> void:
+	if not _use_tilemap_office or office_tilemap == null:
+		return
+	var phase := _get_current_phase_index()
+	var old_size := office_tilemap.get_room_size()
+	office_tilemap.build_office(phase)
+	if office_tilemap.get_room_size() != old_size:
+		_update_office_camera_bounds()
+	office_tilemap.update_members()
+	if furniture_placement:
+		furniture_placement.render_all_furniture()
+	if office_ui_overlay and office_ui_overlay.has_method("refresh"):
+		office_ui_overlay.refresh()
 
 
 func _setup_debug_panel() -> void:
@@ -658,6 +916,13 @@ func _on_turn_ended() -> void:
 	if dev_result != "":
 		_add_log("[color=#55CC70]%s[/color]" % dev_result)
 
+	# 家具バフの月次適用
+	var buff_result = OfficeBuffManager.apply_monthly_buffs()
+	if not buff_result.is_empty():
+		var buff_text := OfficeBuffManager.get_buff_summary_text()
+		if buff_text != "効果なし":
+			_add_log("[color=#88CCAA]🪑 オフィス家具効果: %s[/color]" % buff_text)
+
 	# オートセーブ（3ターンごと）
 	if GameState.month > 0 and GameState.month % 3 == 0:
 		SaveManager.auto_save()
@@ -831,6 +1096,10 @@ func _on_load_completed(_slot: String) -> void:
 	# マイルストーンの達成状況をリセット（ロードしたデータに合わせて再チェック不要）
 	milestone_manager.reset()
 
+	# 家具配置を再描画
+	if furniture_placement:
+		furniture_placement.render_all_furniture()
+
 
 # --- 24時間サイクルコールバック ---
 
@@ -840,6 +1109,7 @@ func _on_hour_changed(day: int, hour: float) -> void:
 	if day_label:
 		day_label.text = "Day %d  %02d:%02d" % [day, h, m]
 	office_view.queue_redraw()
+	_refresh_tilemap_office()
 
 
 func _on_day_started(day: int) -> void:
@@ -1024,6 +1294,7 @@ func _update_ui() -> void:
 
 	# オフィスビジュアル更新
 	office_view.refresh()
+	_refresh_tilemap_office()
 
 	# チームボタンのメンバー数表示
 	team_btn.text = "👥 %d人" % GameState.team_size
@@ -1138,6 +1409,85 @@ func _trigger_quarterly_event() -> void:
 	if effect_text != "":
 		event_popup._effect_label.text = effect_text
 	_add_log("[color=#8899CC]📅 Q%d取締役会: %s[/color]" % [quarter, rating])
+
+
+# --- 家具ショップ/配置コールバック ---
+
+func _on_shop_button_pressed() -> void:
+	AudioManager.play_sfx("click")
+	furniture_shop_popup.show_shop()
+
+func _on_furniture_purchased(item_id: String) -> void:
+	var item = FurnitureData.get_item(item_id)
+	_add_log("🛒 %sを購入！（%d万円）" % [item.get("name", ""), item.get("cost", 0)])
+	_update_ui()
+
+func _on_furniture_placement_requested(item_id: String) -> void:
+	# ショップから配置要求された場合
+	if furniture_placement:
+		furniture_placement.start_placement(item_id)
+
+func _on_furniture_shop_closed() -> void:
+	pass
+
+func _on_furniture_placement_completed(item_id: String, grid_pos: Vector2i) -> void:
+	var item = FurnitureData.get_item(item_id)
+	_add_log("🪑 %sを配置しました！" % item.get("name", ""))
+	AudioManager.play_sfx("success")
+	_update_ui()
+
+func _on_furniture_placement_cancelled() -> void:
+	pass
+
+func _on_furniture_tapped(instance_id: int) -> void:
+	# 配置モード中はタップを無視
+	if furniture_placement and furniture_placement.is_in_placement_mode():
+		return
+	furniture_detail_popup.show_detail(instance_id)
+
+func _on_furniture_sold(instance_id: int) -> void:
+	AudioManager.play_sfx("cash")
+	_add_log("💰 家具を売却しました。")
+	if furniture_placement:
+		furniture_placement.remove_furniture_sprite(instance_id, true)
+	_update_ui()
+
+func _on_furniture_move_requested(instance_id: int) -> void:
+	# 移動: 一旦撤去してインベントリに戻し、配置モードを開始
+	var item_id := FurnitureManager.remove_furniture(instance_id)
+	if item_id != "" and furniture_placement:
+		furniture_placement.remove_furniture_sprite(instance_id)
+		furniture_placement.start_placement(item_id)
+
+func _on_furniture_upgraded(instance_id: int, new_item_id: String) -> void:
+	AudioManager.play_sfx("success")
+	var item = FurnitureData.get_item(new_item_id)
+	_add_log("⬆ %sにアップグレード！" % item.get("name", ""))
+	# 全家具を再描画（旧家具削除 + 新家具追加をまとめて処理）
+	if furniture_placement:
+		furniture_placement.render_all_furniture()
+	_update_ui()
+
+func _on_furniture_detail_closed() -> void:
+	pass
+
+
+func _on_expand_button_pressed() -> void:
+	AudioManager.play_sfx("click")
+	office_expansion_popup.show_popup()
+
+
+func _on_zone_purchased(zone_id: String) -> void:
+	var zone = OfficeExpansionManager.get_zone(zone_id)
+	AudioManager.play_sfx("success")
+	_add_log("🏗️ %s %sを建設！" % [zone.get("icon", ""), zone.get("name", "")])
+	# 部屋サイズが変わった可能性があるのでオフィスを再構築
+	_refresh_tilemap_office()
+	_update_ui()
+
+
+func _on_expansion_popup_closed() -> void:
+	pass
 
 
 func _format_number_local(n: int) -> String:

@@ -143,6 +143,8 @@ func _serialize() -> Dictionary:
 		"tutorial_month": GameState.tutorial_month,
 		"members": members_data,
 		"product_manager": product_data,
+		"furniture_manager": FurnitureManager.serialize(),
+		"office_expansion": OfficeExpansionManager.serialize(),
 	}
 
 
@@ -192,6 +194,21 @@ func _deserialize(data: Dictionary) -> bool:
 				p["design"] = int(data.get("product_design", 5))
 				p["margin"] = int(data.get("product_margin", 0))
 				p["awareness"] = int(data.get("product_awareness", 0))
+
+	# バフを一旦クリア（各マネージャーのdeserializeが再登録する）
+	OfficeBuffManager.clear_all_buffs()
+
+	# 家具配置の復元（内部でバフも再登録される）
+	if data.has("furniture_manager"):
+		FurnitureManager.deserialize(data["furniture_manager"])
+	else:
+		FurnitureManager.reset()
+
+	# エリア拡張の復元（内部でゾーン効果も再登録される）
+	if data.has("office_expansion"):
+		OfficeExpansionManager.deserialize(data["office_expansion"])
+	else:
+		OfficeExpansionManager.reset()
 
 	GameState.state_changed.emit()
 	return true
